@@ -1,5 +1,5 @@
 # LCSM
-Fortran source codes of the linearly continuously stratified ocean model
+Fortran source codes of the linear continuously stratified ocean model
 
 Compile method
 
