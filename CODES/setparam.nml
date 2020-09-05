@@ -1,0 +1,11 @@
+! Namelist of spinup run
+!===============================================
+! Oceanic lateral boundary
+!===============================================
+&ocn_bdry
+slip=2.0
+nu_h=2.0e4
+/
+&ocn_visc
+A=2.0e-7
+/

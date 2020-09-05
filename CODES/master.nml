@@ -1,0 +1,6 @@
+!Namelist of set
+! General calculation setting
+&master
+namelist_param="setparam.nml"
+namelist_io="iofiles_indian.nml"
+/

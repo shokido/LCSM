@@ -1,0 +1,55 @@
+! Namelist of spinup run
+!
+&time
+dt=3600.0             ! time step in seconds
+start_yymmdd=20150101 ! Start year,month,day
+start_hhmmss=000000   ! Start hour,minute,second
+end_yymmdd=20170101 ! End year,month,day
+end_hhmmss=000000   ! End hour,minute,second
+/
+&grid
+fname_in_grid='../INPUT/GRID/grid_indian.nc'
+/
+&wind
+fname_in_uw="../INPUT/WIND/jra55do_uw_clm_indian.nc"
+varname_uw="uw"
+Lcycle_uw="T"
+Tcycle_uw=365.0 ! Should be in days
+fname_in_vw="../INPUT/WIND/jra55do_vw_clm_indian.nc"
+varname_vw="vw"
+Lcycle_vw="T"
+Tcycle_vw=365.0 ! Should be in days
+/
+&strf
+fname_in_cn='../INPUT/STRF/cn_ORAS4_clm_1d_30.nc'
+fname_in_bn="../INPUT/STRF/ORAS4_strf_wio_indian_30.nc"
+varname_bn="obn"
+Lcycle_bn="T"
+Tcycle_bn=365.0
+/
+&init
+in_rst_flag="F"
+fname_in_rst="restart_indian_.nc"
+/
+! History file
+&output_hist
+out_hist_flag=1
+out_hist_int=5
+fname_out_hist="hist_indian_chen.nc"
+/
+! Average file
+&output_avg
+out_avg_flag=1
+out_avg_int=5
+fname_out_avg="avg_indian_chen.nc"
+/
+&output_rst
+out_rst_flag="T"
+fname_out_rst="restart_indian_chen.nc"
+/
+&output_diag
+our_diag_flag="T"
+out_diag_flag=1
+out_diag_int=5
+fname_out_diag="diag_indian_ann.nc"
+/
