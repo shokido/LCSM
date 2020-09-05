@@ -1,0 +1,17 @@
+&params
+nz=121
+H=4000.0
+lambda=-3.0
+/
+&modes
+nmode=30
+/
+&fnames
+fname_pdens="ORAS4_pdens_ann_indian_flood.nc"
+varname_lon="lon"
+varname_lat="lat"
+varname_lev="lev"
+varname_time="time"
+varname_pdens="dens"
+fname_out="ORAS4_strf_ann_indian_30.nc"
+/

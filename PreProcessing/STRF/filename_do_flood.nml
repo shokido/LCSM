@@ -1,0 +1,16 @@
+&grid
+fname_grid="../GRID/grid_indian.nc"
+/
+&vars
+lonname="lon"
+latname="lat"
+levname="lev"
+timename="time"
+nfile=1
+/
+&files
+fname_in(1)="ORAS4_pdens_ann_indian.nc"
+fname_out(1)="ORAS4_pdens_ann_indian_flood.nc"
+varflag(1)="rho"
+varname(1)="dens"
+/

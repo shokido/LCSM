@@ -1,0 +1,17 @@
+&fflag
+lonname="lon"
+latname="lat"
+levname="lev"
+timename="time"
+/
+&temp
+varname_temp="TO"
+fname_temp="ORAS4_temp_ann_indian.nc"
+/
+&salt
+varname_salt="SO"
+fname_salt="ORAS4_salt_ann_indian.nc"
+/
+&pdens
+fname_dens="ORAS4_pdens_ann_indian.nc"
+/
