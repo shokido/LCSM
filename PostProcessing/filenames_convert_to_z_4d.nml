@@ -1,0 +1,12 @@
+&param 
+im1=1
+im2=10
+nfile=1
+/ 
+&fnames
+fname_grid="/Volumes/Promise-Pegasus_2/kusunoki/LCSM/TUTORIAL/test/INPUT/GRID/grid_indian.nc"
+fname_lev="lev_out.dat"
+fname_strf(1)="/Volumes/Promise-Pegasus_2/kusunoki/LCSM/TUTORIAL/test/INPUT/STRF/ORAS4_strf_ann_indian_10.nc"
+fname_ocn(1)="/Volumes/Promise-Pegasus_2/kusunoki/LCSM/TUTORIAL/test/CODES/avg_indian_chen_spinup.nc"
+fname_out(1)="zlev_avg_indian_1_10.nc"
+/
