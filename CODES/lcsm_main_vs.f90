@@ -202,19 +202,24 @@ program lcsm_main_vs
         v(im,0:nx_p+1,1:ny_p+1) = v(im,0:nx_p+1,1:ny_p+1) + 0.5_idx * 0.2_idx * mask_v*(v_next(im,0:nx_p+1,1:ny_p+1) + v_past(im,0:nx_p+1,1:ny_p+1)-2.0_idx*v(im,0:nx_p+1,1:ny_p+1))
         !
         ! Apply boundary conditions
-        call set_bc_p(nx_p,ny_p,p(im,0:nx_p+1,0:ny_p+1),p_past(im,:,:),p_next(im,:,:),wbc_p,ebc_p,nbc_p,sbc_p)
-        call set_bc_u(nx_p,ny_p,u(im,:,:),u_past(im,:,:),u_next(im,:,:),wbc_u,ebc_u,nbc_u,sbc_u,slip)
-        call set_bc_v(nx_p,ny_p,v(im,:,:),v_past(im,:,:),v_next(im,:,:),wbc_v,ebc_v,nbc_v,sbc_v,slip)
-        u_avg(im,:,:)=u_avg(im,:,:)+u(im,:,:)
-        v_avg(im,:,:)=v_avg(im,:,:)+v(im,:,:)
-        p_avg(im,:,:)=p_avg(im,:,:)+p(im,:,:)
+        call set_bc_p(nx_p,ny_p,p(im,0:nx_p+1,0:ny_p+1),p_past(im,0:nx_p+1,0:ny_p+1),p_next(im,0:nx_p+1,0:ny_p+1),wbc_p,ebc_p,nbc_p,sbc_p)
+        call set_bc_u(nx_p,ny_p,u(im,1:nx_p+1,0:ny_p+1),u_past(im,1:nx_p+1,0:ny_p+1),u_next(im,1:nx_p+1,0:ny_p+1),wbc_u,ebc_u,nbc_u,sbc_u,slip)
+        call set_bc_v(nx_p,ny_p,v(im,0:nx_p+1,1:ny_p+1),v_past(im,0:nx_p+1,1:ny_p+1),v_next(im,0:nx_p+1,1:ny_p+1),wbc_v,ebc_v,nbc_v,sbc_v,slip)
+        u_avg(im,1:nx_p+1,0:ny_p+1)=u_avg(im,1:nx_p+1,0:ny_p+1)+&
+             & u(im,1:nx_p+1,0:ny_p+1)
+        v_avg(im,0:nx_p+1,1:ny_p+1)=v_avg(im,0:nx_p+1,1:ny_p+1)+&
+             & v(im,0:nx_p+1,1:ny_p+1)
+        p_avg(im,0:nx_p+1,0:ny_p+1)=p_avg(im,0:nx_p+1,0:ny_p+1)+p(im,0:nx_p+1,0:ny_p+1)
         ! Update
-        u_past(im,:,:) = u(im,:,:) ; v_past(im,:,:) = v(im,:,:) ; p_past(im,:,:) = p(im,:,:)
-        u(im,:,:) = u_next(im,:,:) ; v(im,:,:) = v_next(im,:,:) ; p(im,:,:) = p_next(im,:,:)
+        u_past(im,1:nx_p+1,0:ny_p+1) = u(im,1:nx_p+1,0:ny_p+1)
+        u(im,1:nx_p+1,0:ny_p+1) = u_next(im,1:nx_p+1,0:ny_p+1)
+        v_past(im,0:nx_p+1,1:ny_p+1) = v(im,0:nx_p+1,1:ny_p+1)
+        v(im,0:nx_p+1,1:ny_p+1) = v_next(im,0:nx_p+1,1:ny_p+1)
+        p_past(im,0:nx_p+1,0:ny_p+1) = p(im,0:nx_p+1,0:ny_p+1)
+        p(im,0:nx_p+1,0:ny_p+1) = p_next(im,0:nx_p+1,0:ny_p+1)
      end do
      !$omp end do
      !$omp end parallel
-     
      !Output history file (snapshots)
      if (itime .eq. istep_hist(ihist)) then
         write(*,*) "Step (history) =",ihist," ",itime

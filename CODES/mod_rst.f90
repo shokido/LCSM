@@ -39,6 +39,7 @@ contains
     allocate(u_tmp(1:nx+1,0:ny+1,1))
     allocate(v_tmp(0:nx+1,1:ny+1,1))
     allocate(p_tmp(0:nx+1,0:ny+1,1))
+    
     do im = 1,nm
        vname="u"
        call get_var_3D(fname_rst,vname,u_tmp)
