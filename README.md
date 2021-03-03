@@ -12,6 +12,7 @@ Fortran source codes of the linear continuously stratified ocean model (LCSM; Mc
 ・McCreary, J. P. (1981). A linear stratified ocean model of the coastal undercurrent. Philosophical Transactions of the Royal Society A:
 Mathematical, Physical and Engineering Sciences, 302(1469), 385–413. 
 https://doi.org/10.1098/rsta.1981.0176
+
 ・Kido, S., T. Tozuka, and W. Han, "Experimental assessments on impacts of salinity anomalies on the positive Indian Ocean Dipole"
 Journal of Geophysical Research Oceans, 124, 9462-9486, 2019.
 https://agupubs.onlinelibrary.wiley.com/doi/abs/10.1029/2019JC015479
