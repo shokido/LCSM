@@ -1,5 +1,5 @@
 # LCSM
-Fortran source codes of the linear continuously stratified ocean model (LCSM; McCreary et al. 1981) written by S. Kido. 
+Fortran source codes of the linear continuously stratified ocean model (LCSM; McCreary et al. 1981) written by S. Kido. If you use these codes in your publications, please cite Kido et al. (2019).
 
 
 # How to use it
