@@ -142,7 +142,7 @@ contains
                & (f(iy-1)+f(iy)) * (v(ix,iy)+v(ix-1,iy)))                 ! Coriolis force
           !corx= 0.25_idx * f(iy) * (v(ix,iy+1)+v(ix-1,iy+1)+v(ix,iy)+v(ix-1,iy)) ! Coriolis force (ENS conserve) 
           pgrdx= -1.0_idx*(p(ix,iy)-p(ix-1,iy)) / (x_rho(ix)-x_rho(ix-1)) !Pressure gradient force
-          tx= (tau_x(ix-1,iy) + tau_x(ix,iy)) * (obn(ix-1,iy)+obn(ix,iy)) / rho0            ! Wind forcing
+          tx= 0.5_idx*(tau_x(ix-1,iy) + tau_x(ix,iy)) * (obn(ix-1,iy)+obn(ix,iy)) / rho0            ! Wind forcing
           ! U-viscosity
           dudx_e = (u(ix+1,iy) - u(ix,iy)) / (x_u(ix+1)-x_u(ix))
           dudx_w = (u(ix,iy) - u(ix-1,iy)) / (x_u(ix)-x_u(ix-1))
@@ -186,7 +186,7 @@ contains
           cory = -0.125_idx * (f(iy)+f(iy-1))*(u(ix,iy-1)+u(ix+1,iy-1)+u(ix,iy)+u(ix+1,iy)) ! Coriolis force(ENS conserve)
           !cory = -0.25_idx *  (f(iy) * u(ix,iy)+ f(iy)* u(ix+1,iy)+f(iy-1) * u(ix,iy-1)+ f(iy-1)* u(ix+1,iy-1))! Coriolis force (ENG conserve) !
           pgrdy=-1.0_idx*(p(ix,iy)-p(ix,iy-1)) / (y_rho(iy)-y_rho(iy-1)) ! pressure gradient force
-          ty=(tau_y(ix,iy-1) + tau_y(ix,iy)) * (obn(ix,iy-1)+obn(ix,iy)) / rho0
+          ty=0.5_idx*(tau_y(ix,iy-1) + tau_y(ix,iy)) * (obn(ix,iy-1)+obn(ix,iy)) / rho0
           dvdx_e = mask_phi_v(ix+1,iy) * (v(ix+1,iy) -  v(ix,iy)) / (x_v(ix+1)-x_v(ix))
           dvdx_w = mask_phi_v(ix,iy) * (v(ix,iy) -  v(ix-1,iy)) / (x_v(ix)-x_v(ix-1))
           dvdy_n = (v(ix,iy+1) - v(ix,iy)) / (y_v(iy+1)-y_v(iy))
