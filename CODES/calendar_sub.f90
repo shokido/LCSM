@@ -53,8 +53,8 @@ contains
     integer :: hh,mm,ss
     hh=hhmmss/10000
     mm=hhmmss/100-hh*100
-    ss=hhmmss-hh*10000-mm
-    day=hh/24.0_idx + mm / (24.0_idx*60.0_idx) + mm / (24.0_idx*60.0_idx*60.0_idx)
+    ss=hhmmss-hh*10000-mm*100
+    day=hh/24.0_idx + mm / (24.0_idx*60.0_idx) + ss / (24.0_idx*60.0_idx*60.0_idx)
   end function hhmmss_to_day
   function dhhmmss_to_day(hhmmss) result(day)
     implicit none
@@ -64,8 +64,8 @@ contains
     integer :: hh,mm,ss
     hh=hhmmss/10000
     mm=hhmmss/100-hh*100
-    ss=hhmmss-hh*10000-mm
-    day=hh/24.0_idx + mm / (24.0_idx*60.0_idx) + mm / (24.0_idx*60.0_idx*60.0_idx)
+    ss=hhmmss-hh*10000-mm*100
+    day=hh/24.0_idx + mm / (24.0_idx*60.0_idx) + ss / (24.0_idx*60.0_idx*60.0_idx)
   end function dhhmmss_to_day
   function day_to_hhmmss(day) result(hhmmss)
     implicit none
@@ -242,8 +242,8 @@ contains
        start_day=start_yymmdd-start_year*10000-start_month*100
        end_month=start_month+int(time)
        if (end_month .gt. 12) then
-          end_year = start_year+int(end_month/12)
-          end_month=end_month-int(end_month/12)*12
+          end_year = start_year+int((end_month-1)/12)
+          end_month=end_month-int((end_month-1)/12)*12
        else
           end_year = start_year
        end if
@@ -302,7 +302,6 @@ contains
     real(idx) :: tmp
     integer :: flag
     integer :: start_year,end_year,start_month,end_month,start_day,end_day
-    integer :: tmp_yymmdd,tmp_hhmmss
     select case (flag)
     case(-10000) ! Unit = seconds
        tmp=0.0_idx
@@ -348,7 +347,6 @@ contains
     real(idx) :: tmp
     integer :: flag
     integer :: start_year,end_year,start_month,end_month,start_day,end_day
-    integer :: tmp_yymmdd,tmp_hhmmss
     select case (flag)
     case(-10000) ! Unit = seconds
        tmp=0.0_idx
@@ -397,7 +395,9 @@ contains
     integer :: hr_ind,min_ind,sec_ind
     ! hours case
     if (index(units,"seconds") .ne. 0 .or. index(units,"Seconds") .ne. 0) then
-       stamp_ind = -1     ! second case
+       stamp_ind = -10000     ! second case
+    else if (index(units,"minutes") .ne. 0 .or. index(units,"Minutes") .ne. 0) then
+       stamp_ind = -100     ! minute case
     else if (index(units,"hours") .ne. 0 .or. index(units,"Hours") .ne. 0) then
        stamp_ind = -1     ! hour case
     else if (index(units,"days") .ne. 0 .or. index(units,"Days") .ne. 0) then
@@ -448,7 +448,7 @@ contains
     integer :: start_year,start_month,start_day
     character :: year_ind*4,month_ind*2,day_ind*2
     integer :: start_hour,start_min,start_sec
-    character :: hour_ind*4,min_ind*2,sec_ind*2
+    character :: hour_ind*2,min_ind*2,sec_ind*2
     character :: ref_unit*8
     character :: time_unit*100
     start_year=start_yymmdd/10000
@@ -457,10 +457,10 @@ contains
     write(year_ind,'(i4.4)') start_year
     write(month_ind,'(i2.2)') start_month
     write(day_ind,'(i2.2)') start_day
-    start_hour=start_yymmdd/10000
-    start_min=start_yymmdd/100-start_hour*100
-    start_sec=start_yymmdd-start_hour*10000-start_min*100
-    write(hour_ind,'(i4.4)') start_hour
+    start_hour=start_hhmmss/10000
+    start_min=start_hhmmss/100-start_hour*100
+    start_sec=start_hhmmss-start_hour*10000-start_min*100
+    write(hour_ind,'(i2.2)') start_hour
     write(min_ind,'(i2.2)') start_min
     write(sec_ind,'(i2.2)') start_sec
     ! ref unit
@@ -477,6 +477,7 @@ contains
     else
        ref_unit="seconds"
     end if
-    time_unit=trim(ref_unit)//" since "//year_ind//"-"//month_ind//"-"//day_ind//" 00:00:00"
+    time_unit=trim(ref_unit)//" since "//year_ind//"-"//month_ind//"-"//day_ind//" "&
+    & //hour_ind//":"//min_ind//":"//sec_ind
   end function calendar_create_time_att
 end module calendar_sub
