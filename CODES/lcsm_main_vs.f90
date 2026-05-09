@@ -33,11 +33,16 @@ program lcsm_main_vs
   ! History file
   integer :: out_hist_flag,out_hist_int
   character(maxlen) :: fname_out_hist
+  ! Average file
+  integer :: out_avg_flag,out_avg_int
+  character(maxlen) :: fname_out_avg
   ! Namelist
   namelist/date/dt,start_yymmdd,start_hhmmss,end_yymmdd,end_hhmmss
   namelist/grid/fname_in_grid
   namelist/output_hist/out_hist_flag,out_hist_int
   namelist/output_hist/fname_out_hist
+  namelist/output_avg/out_avg_flag,out_avg_int
+  namelist/output_avg/fname_out_avg
   namelist/param_ocn/oset
   !$ double precision st, en
   !$ st = omp_get_wtime()

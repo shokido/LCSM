@@ -6,14 +6,9 @@ module mod_avg
   integer :: ntime_avg,iavg
   real(idx),allocatable :: time_avg(:)
   integer,allocatable :: istep_avg(:)  
-  integer :: out_avg_flag,out_avg_int
-  character(maxlen) :: fname_out_avg
   ! Shallow water
   real(idx),allocatable :: u_avg(:,:,:),v_avg(:,:,:),p_avg(:,:,:)
   real(idx),allocatable :: tau_x_avg(:,:),tau_y_avg(:,:)
-  ! Namelist
-  namelist/output_avg/out_avg_flag,out_avg_int
-  namelist/output_avg/fname_out_avg
 contains
   !==========================!
   ! Creation of average file !
