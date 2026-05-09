@@ -15,8 +15,8 @@ module mod_wind
   real(idx),allocatable :: time_vw(:),wind_y(:,:,:)
   character(1) :: Lcycle_vw
   real(idx) :: Tcycle_vw
-  ! Wind stress array
-  real(idx),allocatable :: tau_x(:,:),tau_y(:,:)
+!  ! Wind stress array
+!  real(idx),allocatable :: tau_x(:,:),tau_y(:,:)
   namelist/wind/fname_in_uw,varname_uw,Lcycle_uw,Tcycle_uw
   namelist/wind/fname_in_vw,varname_vw,Lcycle_vw,Tcycle_vw
 end module mod_wind

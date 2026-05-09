@@ -5,15 +5,16 @@ program lcsm_main_vs
   !*************************************************************************!
   !$ use omp_lib
   ! NetCDF
+  use ncdf_read
   use ncdf_write
   ! Input and output
 !  use io_param
   use input_files
+  use mod_io_master
   use mod_grid
   use mod_avg
   use mod_hist
   use mod_rst
-  use mod_wind
   use mod_strf
   ! Time routines
   use calendar_sub
@@ -42,6 +43,20 @@ program lcsm_main_vs
   ! Output  restart file
   character(1) :: out_rst_flag
   character(maxlen) :: fname_out_rst
+  ! Zonal wind stress
+  type(TLL_dta) :: ocn_taux_dta
+  integer :: nfile_ocn_taux
+  character(len=maxlen),allocatable :: fnames_ocn_taux(:)
+  character(len=maxlen) :: timename_ocn_taux,varname_ocn_taux
+  character(1) :: Lcycle_ocn_taux
+  real(idx) :: Tcycle_ocn_taux
+ ! Meridional wind stress
+  type(TLL_dta) :: ocn_tauy_dta
+  integer :: nfile_ocn_tauy
+  character(len=maxlen),allocatable :: fnames_ocn_tauy(:)
+  character(len=maxlen) :: timename_ocn_tauy,varname_ocn_tauy
+  character(1) :: Lcycle_ocn_tauy
+  real(idx) :: Tcycle_ocn_tauy
   ! Stratification file
   character(maxlen) :: fname_in_cn
   character(maxlen) :: fname_in_bn,varname_bn
@@ -56,6 +71,10 @@ program lcsm_main_vs
   namelist/output_avg/fname_out_avg
   namelist/init/in_rst_flag,fname_in_rst
   namelist/output_rst/out_rst_flag,fname_out_rst
+ namelist/taux_param_ocn/nfile_ocn_taux,timename_ocn_taux,varname_ocn_taux,Lcycle_ocn_taux,Tcycle_ocn_taux
+  namelist/taux_io_ocn/fnames_ocn_taux
+  namelist/tauy_param_ocn/nfile_ocn_tauy,timename_ocn_tauy,varname_ocn_tauy,Lcycle_ocn_tauy,Tcycle_ocn_tauy
+  namelist/tauy_io_ocn/fnames_ocn_tauy
   namelist/strf/fname_in_cn
   namelist/strf/fname_in_bn,varname_bn,Lcycle_bn,Tcycle_bn
   namelist/param_ocn/oset
@@ -95,20 +114,30 @@ program lcsm_main_vs
   ! Read atmospheric data
   !===============================================
   ! Wind stess
-  read(5,nml=wind)
-  call read_TLL_p(nx_p,ny_p,fname_in_uw,varname_uw,wind_x,time_uw,start_yymmdd,start_hhmmss)
-  call read_TLL_p(nx_p,ny_p,fname_in_vw,varname_vw,wind_y,time_vw,start_yymmdd,start_hhmmss)
+  read(5,taux_param_ocn)
+  allocate(fnames_ocn_taux(nfile_ocn_taux))
+  read(5,taux_io_ocn)
+  read(5,tauy_param_ocn)
+  allocate(fnames_ocn_tauy(nfile_ocn_tauy))
+  read(5,tauy_io_ocn)
+ call read_data_TLL_p(nfile_ocn_taux,fnames_ocn_taux,timename_ocn_taux,varname_ocn_taux,&
+       & nx_p,ny_p,ocn_taux_dta,start_yymmdd,start_hhmmss) ! Zonal wind
+  ocn_taux_dta%Lcycle=Lcycle_ocn_taux;ocn_taux_dta%Tcycle=Tcycle_ocn_taux
+  call read_data_TLL_p(nfile_ocn_tauy,fnames_ocn_tauy,timename_ocn_tauy,varname_ocn_tauy,&
+       & nx_p,ny_p,ocn_tauy_dta,start_yymmdd,start_hhmmss) ! Meridional wind
+  ocn_tauy_dta%Lcycle=Lcycle_ocn_tauy;ocn_tauy_dta%Tcycle=Tcycle_ocn_tauy
+
+  !   call read_TLL_p(nx_p,ny_p,fname_in_uw,varname_uw,wind_x,time_uw,start_yymmdd,start_hhmmss)
+!   call read_TLL_p(nx_p,ny_p,fname_in_vw,varname_vw,wind_y,time_vw,start_yymmdd,start_hhmmss)
   allocate(tau_x(0:nx_p+1,0:ny_p+1)) ; allocate(tau_y(0:nx_p+1,0:ny_p+1))
   write(*,*) "**********************************"
   write(*,*) "Finish reading wind data"
-  write(*,*) "Wind (u) file name= "//trim(fname_in_uw)
-  write(*,*) "Wind (v) file name= "//trim(fname_in_vw)
   write(*,*) "**********************************"
   !===============================================
   ! Read vertical mode decomposition data (1-D)
   !===============================================
   read(5,nml=strf)
-  nm=get_dimsize(fname_in_cn,"mode"); allocate(cn(1:nm))
+  call get_dimsize(fname_in_cn,"mode",nm); allocate(cn(1:nm))
   call get_var_1D(fname_in_cn,"cn",cn(1:nm))
   write(*,*) "**************************************"
   write(*,*) "Finish reading cn data"
@@ -172,32 +201,37 @@ program lcsm_main_vs
   write(*,*) "Total vertical modes=",nm
   write(*,*) "Number of timestep=",ntime
   do itime = 1,ntime
-     iavg_count = iavg_count + 1
-     time_int=dt*itime
-     if (Lcycle_uw .eq. "T") then
-        time_int_uw=time_int-int(time_int/(Tcycle_uw*60.0*60.0*24.0))*Tcycle_uw*60.0*60.0*24.0
-     else
-        time_int_uw=time_int
-     end if
-     if (Lcycle_vw .eq. "T") then
-        time_int_vw=time_int-int(time_int/(Tcycle_vw*60.0*60.0*24.0))*Tcycle_vw*60.0*60.0*24.0
-     else
-        time_int_vw=time_int
-     end if
-     if (Lcycle_bn .eq. "T") then
-        time_int_bn=time_int-int(time_int/(Tcycle_bn*60.0*60.0*24.0))*Tcycle_bn*60.0*60.0*24.0
-     else
-        time_int_bn=time_int
-     end if
+      iavg_count = iavg_count + 1
+      time_int=dt*itime*sec_to_day
+     call get_data_TLL_p(time_int,start_yymmdd,start_hhmmss,nx_p,ny_p,ocn_taux_dta)
+     call get_data_TLL_p(time_int,start_yymmdd,start_hhmmss,nx_p,ny_p,ocn_tauy_dta)
+     tau_x=ocn_taux_dta%data_now%val
+     tau_y=ocn_tauy_dta%data_now%val
+      !   time_int=dt*itime
+   !   if (Lcycle_uw .eq. "T") then
+   !      time_int_uw=time_int-int(time_int/(Tcycle_uw*60.0*60.0*24.0))*Tcycle_uw*60.0*60.0*24.0
+   !   else
+   !      time_int_uw=time_int
+   !   end if
+   !   if (Lcycle_vw .eq. "T") then
+   !      time_int_vw=time_int-int(time_int/(Tcycle_vw*60.0*60.0*24.0))*Tcycle_vw*60.0*60.0*24.0
+   !   else
+   !      time_int_vw=time_int
+   !   end if
+   !   if (Lcycle_bn .eq. "T") then
+   !      time_int_bn=time_int-int(time_int/(Tcycle_bn*60.0*60.0*24.0))*Tcycle_bn*60.0*60.0*24.0
+   !   else
+   !      time_int_bn=time_int
+   !   end if
 
-     call time_wgt(time_uw,time_int_uw,ind1_uw,ind2_uw,wgt1_uw,wgt2_uw)
-     call time_wgt(time_vw,time_int_vw,ind1_vw,ind2_vw,wgt1_vw,wgt2_vw)
+   !   call time_wgt(time_uw,time_int_uw,ind1_uw,ind2_uw,wgt1_uw,wgt2_uw)
+   !   call time_wgt(time_vw,time_int_vw,ind1_vw,ind2_vw,wgt1_vw,wgt2_vw)
      call time_wgt(time_bn,time_int_bn,ind1_bn,ind2_bn,wgt1_bn,wgt2_bn)
      !Set wind stress and projection coefficients
      do ix = 0,nx_p+1
         do iy = 0,ny_p+1
-           tau_x(ix,iy)=set_data(ind1_uw,ind2_uw,wgt1_uw,wgt2_uw,wind_x(ix,iy,:))
-           tau_y(ix,iy)=set_data(ind1_vw,ind2_vw,wgt1_vw,wgt2_vw,wind_y(ix,iy,:))
+         !   tau_x(ix,iy)=set_data(ind1_uw,ind2_uw,wgt1_uw,wgt2_uw,wind_x(ix,iy,:))
+         !   tau_y(ix,iy)=set_data(ind1_vw,ind2_vw,wgt1_vw,wgt2_vw,wind_y(ix,iy,:))
            do im = 1,nm
               bn(im,ix,iy)=set_data(ind1_bn,ind2_bn,wgt1_bn,wgt2_bn,bn_in(ix,iy,im,:))
            end do
@@ -295,10 +329,8 @@ program lcsm_main_vs
   ! Vertical modes
   deallocate(cn) ; deallocate(bn)
   ! Time arrays
-  deallocate(time_uw); deallocate(time_vw)
   deallocate(istep_hist) ; deallocate(istep_avg)
   ! External forcing
-  deallocate(wind_x) ; deallocate(wind_y)
   deallocate(tau_x) ; deallocate(tau_y) 
   ! 3D-arrays
   deallocate(u); deallocate(v); deallocate(p)

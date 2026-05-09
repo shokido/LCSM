@@ -1,43 +1,44 @@
 ## Makefile of Linearly continuosly stratified mode
 #==========================
 #Set compiler
-FC  = ifort
+FC  = gfortran
 #==========================
 #Set compile option
-NETCDF_INCDIR=/opt/local/build/netcdf4/netcdf-c-4.3.3.1_ifort_gcc/include
-NETCDF_LIBDIR=/opt/local/build/netcdf4/netcdf-c-4.3.3.1_ifort_gcc/lib
-FFLAGS += -I$(NETCDF_INCDIR)
-LDFLAGS += -L$(NETCDF_LIBDIR) -lnetcdf -lnetcdff 
-LDFLAGS += -fpp -O2 -qopenmp
+NETCDF_INCDIR=-I/opt/homebrew/Cellar/netcdf-fortran/4.6.1/include -I/opt/homebrew/Cellar/netcdf-fortran/4.6.1/include
+NETCDF_LIBDIR=-L/opt/homebrew/Cellar/netcdf-fortran/4.6.1/lib -L/opt/homebrew/Cellar/netcdf/4.9.2_2/lib
+FFLAGS += $(NETCDF_INCDIR)
+LDFLAGS += $(NETCDF_LIBDIR) -lnetcdf -lnetcdff
+LDFLAGS += -cpp -O2 -Wopenmp
 #==========================
 # You don't have to edit the following part
 #==========================
 TARGET=../RUN/exec_lcsm_vs.out
-OBJ_ncdf  = ncdf_write.o
-OBJ = run_param.o
+OBJ_ncdf  = ncdf_write.o \
+ncdf_read.o
+OBJ = run_param.o \
+run_types.o 
 OBJ_io  = calendar_sub.o \
 input_files.o \
+mod_io_master.o \
 mod_hist.o \
 mod_grid.o \
 mod_avg.o \
 mod_rst.o \
-mod_wind.o \
 mod_strf.o 
-OBJ_ocn  = lcsm_param.o \
- lcsm_array.o \
+OBJ_ocn  = lcsm_array.o \
  ocn_dyn.o
 OBJ_main  = lcsm_main_vs.o
 
-MODS  = ncdf_write.mod \
+MODS  = ncdf_read.mod \
+		ncdf_write.mod \
         calendar_sub.mod \
         input_files.mod \
         mod_hist.mod \
         mod_grid.mod \
         mod_avg.mod \
         mod_rst.mod \
-        mod_wind.mod \
         mod_strf.mod \
-        lcsm_param.mod \
+        run_types.mod \
 	lcsm_array.mod \
 	ocn_dyn.mod  \
 
@@ -48,11 +49,19 @@ $(TARGET): $(OBJ_ncdf) $(OBJ) $(OBJ_io) $(OBJ_ocn) $(OBJ_main)
 	$(FC) -o $@ $(OBJ_ncdf) $(OBJ) $(OBJ_io) $(OBJ_ocn)  $(OBJ_main) ${LDFLAGS} ${FFLAGS}
 
 #Objects--------------------------------------
+ncdf_read.o:ncdf_read.f90
+	$(FC) -c $< ${LDFLAGS} ${FFLAGS}
 ncdf_write.o:ncdf_write.f90
 	$(FC) -c $< ${LDFLAGS} ${FFLAGS}
 calendar_sub.o:calendar_sub.f90
 	$(FC) -c $< ${LDFLAGS} ${FFLAGS}
+run_param.o:run_param.f90
+	$(FC) -c $< ${LDFLAGS} ${FFLAGS}
+run_types.o:run_types.f90 run_param.f90
+	$(FC) -c $< ${LDFLAGS} ${FFLAGS}
 input_files.o:input_files.f90 calendar_sub.f90
+	$(FC) -c $< ${LDFLAGS} ${FFLAGS}
+mod_io_master.o:mod_io_master.f90 run_types.f90
 	$(FC) -c $< ${LDFLAGS} ${FFLAGS}
 mod_grid.o:mod_grid.f90 input_files.f90
 	$(FC) -c $< ${LDFLAGS} ${FFLAGS}
@@ -62,19 +71,13 @@ mod_avg.o:mod_avg.f90
 	$(FC) -c $< ${LDFLAGS} ${FFLAGS}
 mod_rst.o:mod_rst.f90
 	$(FC) -c $< ${LDFLAGS} ${FFLAGS}
-mod_wind.o:mod_wind.f90
-	$(FC) -c $< ${LDFLAGS} ${FFLAGS}
 mod_strf.o:mod_strf.f90 input_files.f90
-	$(FC) -c $< ${LDFLAGS} ${FFLAGS}
-run_param.o:run_param.f90
-	$(FC) -c $< ${LDFLAGS} ${FFLAGS}
-lcsm_param.o:lcsm_param.f90 run_param.f90
 	$(FC) -c $< ${LDFLAGS} ${FFLAGS}
 lcsm_array.o:lcsm_array.f90
 	$(FC) -c $< ${LDFLAGS} ${FFLAGS}
 ocn_dyn.o:ocn_dyn.f90
 	$(FC) -c $< ${LDFLAGS} ${FFLAGS}
-lcsm_main_vs.o:lcsm_main_vs.f90 lcsm_param.f90 run_param.f90
+lcsm_main_vs.o:lcsm_main_vs.f90 run_types.f90 run_param.f90
 	$(FC) -c $< ${LDFLAGS} ${FFLAGS}
 clean:
 	rm -f $(TARGET_grid) $(TARGET) $(OBJ) $(OBJ_io) $(OBJ_grid) $(OBJ_ocn) $(OBJ_atm) $(OBJ_ncdf) $(MODS)
