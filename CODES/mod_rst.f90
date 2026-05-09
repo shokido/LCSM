@@ -5,16 +5,6 @@ module mod_rst
   implicit none
   ! Restart==============================================================
   ! Input
-  character(1) :: in_rst_flag
-  character(maxlen) :: fname_in_rst
-  ! Output 
-  character(1) :: out_rst_flag
-  character(maxlen) :: fname_out_rst
-  ! Namelist
-  ! Input
-  namelist/init/in_rst_flag,fname_in_rst
-  ! Output
-  namelist/output_rst/out_rst_flag,fname_out_rst
 contains
   !===============================
   ! Read restart file

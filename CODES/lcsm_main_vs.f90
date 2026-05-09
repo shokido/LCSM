@@ -36,6 +36,12 @@ program lcsm_main_vs
   ! Average file
   integer :: out_avg_flag,out_avg_int
   character(maxlen) :: fname_out_avg
+  ! Input restart file
+  character(1) :: in_rst_flag
+  character(maxlen) :: fname_in_rst
+  ! Output  restart file
+  character(1) :: out_rst_flag
+  character(maxlen) :: fname_out_rst
   ! Namelist
   namelist/date/dt,start_yymmdd,start_hhmmss,end_yymmdd,end_hhmmss
   namelist/grid/fname_in_grid
@@ -43,6 +49,8 @@ program lcsm_main_vs
   namelist/output_hist/fname_out_hist
   namelist/output_avg/out_avg_flag,out_avg_int
   namelist/output_avg/fname_out_avg
+  namelist/init/in_rst_flag,fname_in_rst
+  namelist/output_rst/out_rst_flag,fname_out_rst
   namelist/param_ocn/oset
   !$ double precision st, en
   !$ st = omp_get_wtime()
@@ -230,8 +238,6 @@ program lcsm_main_vs
      !Output history file (snapshots)
      if (itime .eq. istep_hist(ihist)) then
         write(*,*) "Step (history) =",ihist," ",itime
-        write(*,*) mask_u(1,0:10),"m"
-        write(*,*) u(1,1,0:10)
         call write_hist(trim(fname_out_hist),nx_p,ny_p,nm,ihist,u,v,p,&
              & mask_u,mask_v,mask_p,missing_value)
         call write_hist_2d(trim(fname_out_hist),nx_p,ny_p,ihist,tau_x,tau_y,&
