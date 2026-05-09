@@ -1,6 +1,6 @@
 module ocn_dyn
   use run_param
-  use lcsm_param
+  use run_types
   implicit none
   private
   !=============================================
@@ -83,7 +83,7 @@ contains
   ! Solve Shallow water equation under wind forcing
   !==================================================================
   subroutine dyn_shallow_p(nx,ny,x_rho,y_rho,x_u,y_u,x_v,y_v,mask_rho,damp_p,&     
-       & u,v,p,p_past,p_next,cn,obn,dt)
+       & u,v,p,p_past,p_next,cn,obn,dt,oset)
     implicit none
     integer,intent(in) :: nx,ny
     real(idx),intent(in) :: x_rho(0:nx+1), y_rho(0:ny+1), x_u(1:nx+1), y_u(0:ny+1), x_v(0:nx+1),y_v(1:ny+1)
@@ -93,6 +93,7 @@ contains
     real(idx),intent(in) :: p_past(0:nx+1,0:ny+1)
     real(idx),intent(inout) :: p_next(0:nx+1,0:ny+1)
     real(idx),intent(in) :: dt,cn,obn(0:nx+1,0:ny+1)
+    type(ocn_set),intent(in) :: oset
     integer :: ix,iy
     real(idx) :: dudx,dvdy,drag_p,rhs_p
     !
@@ -103,7 +104,7 @@ contains
           !=================================
           ! p equation
           !=================================
-          drag_p = -1.0_idx * p(ix,iy) * (A / (cn**2)+damp_p(ix,iy))
+          drag_p = -1.0_idx * p(ix,iy) * (oset%A / (cn**2)+damp_p(ix,iy))
           dudx=-1.0_idx*(cn**2)*(u(ix+1,iy)-u(ix,iy)) / (x_u(ix+1)-x_u(ix))
           dvdy=-1.0_idx*(cn**2)*(v(ix,iy+1)-v(ix,iy)) / (y_v(iy+1)-y_v(iy))
           rhs_p=drag_p + dudx + dvdy
@@ -113,7 +114,7 @@ contains
   end subroutine dyn_shallow_p
   subroutine dyn_shallow_u(nx,ny,x_rho,y_rho,x_u,y_u,x_v,y_v,f,&
        & mask_u,mask_phi_u,damp_u,nu, &       
-       & tau_x,u,v,p,u_past,u_next,cn,obn,dt,A_vis)
+       & tau_x,u,v,p,u_past,u_next,cn,obn,dt,oset)
     implicit none
     integer,intent(in) :: nx,ny
     real(idx),intent(in) :: x_rho(0:nx+1), y_rho(0:ny+1), x_u(1:nx+1), y_u(0:ny+1), x_v(0:nx+1),y_v(1:ny+1)
@@ -124,7 +125,8 @@ contains
     real(idx),intent(in) :: u(1:nx+1,0:ny+1),v(0:nx+1,1:ny+1),p(0:nx+1,0:ny+1)
     real(idx),intent(in) :: u_past(1:nx+1,0:ny+1)
     real(idx),intent(inout) :: u_next(1:nx+1,0:ny+1)
-    real(idx),intent(in) :: dt,A_vis,cn,obn(0:nx+1,0:ny+1)
+    type(ocn_set),intent(in) :: oset
+    real(idx),intent(in) :: dt,cn,obn(0:nx+1,0:ny+1)
     integer :: ix,iy
     real(idx) :: corx,pgrdx,tx,diffu,drag_u,rhs_u
     real(idx) :: dudx_e,dudx_w,dudy_n,dudy_s
@@ -137,12 +139,12 @@ contains
           !=================================
           ! U equation
           !=================================
-          drag_u = -1.0_idx * u(ix,iy) * (A_vis / (cn**2)+damp_u(ix,iy))
+          drag_u = -1.0_idx * u(ix,iy) * (oset%A / (cn**2)+damp_u(ix,iy))
           corx= 0.125_idx * ((f(iy)+f(iy+1))*(v(ix,iy+1)+v(ix-1,iy+1)) + &
                & (f(iy-1)+f(iy)) * (v(ix,iy)+v(ix-1,iy)))                 ! Coriolis force
           !corx= 0.25_idx * f(iy) * (v(ix,iy+1)+v(ix-1,iy+1)+v(ix,iy)+v(ix-1,iy)) ! Coriolis force (ENS conserve) 
           pgrdx= -1.0_idx*(p(ix,iy)-p(ix-1,iy)) / (x_rho(ix)-x_rho(ix-1)) !Pressure gradient force
-          tx= 0.5_idx*(tau_x(ix-1,iy) + tau_x(ix,iy)) * (obn(ix-1,iy)+obn(ix,iy)) / rho0            ! Wind forcing
+          tx= 0.5_idx*(tau_x(ix-1,iy) + tau_x(ix,iy)) * (obn(ix-1,iy)+obn(ix,iy)) / oset%rho0            ! Wind forcing
           ! U-viscosity
           dudx_e = (u(ix+1,iy) - u(ix,iy)) / (x_u(ix+1)-x_u(ix))
           dudx_w = (u(ix,iy) - u(ix-1,iy)) / (x_u(ix)-x_u(ix-1))
@@ -159,7 +161,7 @@ contains
     end do
   end subroutine dyn_shallow_u
   subroutine dyn_shallow_v(nx,ny,x_rho,y_rho,x_u,y_u,x_v,y_v,f,&
-       & mask_v,mask_phi_v,damp_v,nu,tau_y,u,v,p,v_past,v_next,cn,obn,dt,A_vis)
+       & mask_v,mask_phi_v,damp_v,nu,tau_y,u,v,p,v_past,v_next,cn,obn,dt,oset)
     implicit none
     integer,intent(in) :: nx,ny
     real(idx),intent(in) :: x_rho(0:nx+1), y_rho(0:ny+1), x_u(1:nx+1), y_u(0:ny+1), x_v(0:nx+1),y_v(1:ny+1)
@@ -170,7 +172,8 @@ contains
     real(idx),intent(in) :: u(1:nx+1,0:ny+1),v(0:nx+1,1:ny+1),p(0:nx+1,0:ny+1)
     real(idx),intent(in) :: v_past(0:nx+1,1:ny+1)
     real(idx),intent(inout) :: v_next(0:nx+1,1:ny+1)
-    real(idx),intent(in) :: dt,A_vis,cn,obn(0:nx+1,0:ny+1)
+    type(ocn_set),intent(in) :: oset
+    real(idx),intent(in) :: dt,cn,obn(0:nx+1,0:ny+1)
     integer :: ix,iy
     real(idx) :: cory,pgrdy,ty,diffv,drag_v,rhs_v
     real(idx) :: dvdx_e,dvdx_w,dvdy_n,dvdy_s
@@ -182,11 +185,11 @@ contains
           !=================================
           ! V equation
           !=================================
-          drag_v = -1.0_idx * v(ix,iy) * (A_vis / (cn**2)+damp_v(ix,iy))
+          drag_v = -1.0_idx * v(ix,iy) * (oset%A / (cn**2)+damp_v(ix,iy))
           cory = -0.125_idx * (f(iy)+f(iy-1))*(u(ix,iy-1)+u(ix+1,iy-1)+u(ix,iy)+u(ix+1,iy)) ! Coriolis force(ENS conserve)
           !cory = -0.25_idx *  (f(iy) * u(ix,iy)+ f(iy)* u(ix+1,iy)+f(iy-1) * u(ix,iy-1)+ f(iy-1)* u(ix+1,iy-1))! Coriolis force (ENG conserve) !
           pgrdy=-1.0_idx*(p(ix,iy)-p(ix,iy-1)) / (y_rho(iy)-y_rho(iy-1)) ! pressure gradient force
-          ty=0.5_idx*(tau_y(ix,iy-1) + tau_y(ix,iy)) * (obn(ix,iy-1)+obn(ix,iy)) / rho0
+          ty=0.5_idx*(tau_y(ix,iy-1) + tau_y(ix,iy)) * (obn(ix,iy-1)+obn(ix,iy)) / oset%rho0
           dvdx_e = mask_phi_v(ix+1,iy) * (v(ix+1,iy) -  v(ix,iy)) / (x_v(ix+1)-x_v(ix))
           dvdx_w = mask_phi_v(ix,iy) * (v(ix,iy) -  v(ix-1,iy)) / (x_v(ix)-x_v(ix-1))
           dvdy_n = (v(ix,iy+1) - v(ix,iy)) / (y_v(iy+1)-y_v(iy))
@@ -303,7 +306,7 @@ contains
     integer :: ix,iy
     real(idx) :: mu,mux,muy
     real(idx) :: tiny=1.0e-20
-    gamma2 = 1.0_8 - slip_ind ! gamma2=1 for slip_ind=0 (du/dx=0),gamma2=-1 for slip_ind=2 (u=0)
+    gamma2 = 1.0_idx - 2.0_idx*slip_ind ! gamma2=1 for slip_ind=0 (du/dx=0),gamma2=-1 for slip_ind=2 (u=0)
     !=================================
     ! Western boundary condition
     !=================================
@@ -316,20 +319,6 @@ contains
        do iy = 1,ny
           u_next(1,iy) = u_next(2,iy)
        end do
-    case ("Rad","RAD","rad") ! Radiation boundary
-       do iy = 1,ny
-          mu = (u_next(2,iy)-u_past(2,iy)) / (2.0 * u(3,iy)-u_past(2,iy)-u_next(2,iy)+tiny)
-          mu = max(0.0_8,mu)
-          mu = min(1.0_8,mu)
-          u_next(1,iy) = ((1.0_8-mu) * u(1,iy) + 2.0_8 * mu * u(2,iy)) / (1 + mu)
-       end do
-    case ("Rad2","RAD2","rad2") ! Radiation boundary2
-       do iy = 1,ny
-          mu = (u(2,iy)-u_past(2,iy)) / (u_past(3,iy)-u_past(2,iy)+tiny)
-          mu = max(0.0_8,mu)
-          mu = min(1.0_8,mu)
-          u_next(1,iy) = (1.0_8-mu) * u(1,iy) + mu * u(2,iy)
-       end do    
     end select
     !=================================
     ! Eastern boundary condition
@@ -342,20 +331,6 @@ contains
     case ("Gra","GRA","gra") ! Gradient boundary condition
        do iy = 1,ny
           u_next(nx+1,iy) = u_next(nx,iy)
-       end do
-    case ("Rad","RAD","rad") ! Radiation boundary
-       do iy = 1,ny
-          mu = (u_next(nx,iy)-u_past(nx,iy)) / (2.0*u(nx-1,iy)-u_past(nx,iy)-u_next(nx,iy)+tiny)
-          mu = max(0.0_8,mu)
-          mu = min(1.0_8,mu)
-          u_next(nx+1,iy) = ((1.0_8-mu) * u(nx+1,iy) + 2.0_8 * mu * u(nx,iy)) / (1.0_8 + mu)
-       end do       
-    case ("Rad2","RAD2","rad2") ! Radiation boundary mod
-       do iy = 1,ny
-          mu = (u(nx,iy)-u_past(nx,iy)) / (u_past(nx-1,iy)-u_past(nx,iy)+tiny)
-          mu = max(0.0_8,mu)
-          mu = min(1.0_8,mu)
-          u_next(nx+1,iy) = (1.0_8-mu) * u(nx+1,iy) +  mu * u(nx,iy)
        end do
     end select
     !=================================
@@ -370,21 +345,6 @@ contains
        do ix = 2,nx
           u_next(ix,0) = u_next(ix,1)
        end do
-    case ("Rad","RAD","rad") ! Radiation boundary
-       do ix = 1,nx
-          mu = (u_next(ix,1)-u_past(ix,1)) / &
-               &  (2.0_8 * u(ix,2)-u_next(ix,1)-u_past(ix,1)+tiny)
-          mu = max(0.0_8,mu)
-          mu = min(1.0_8,mu)
-          u_next(ix,0) = ((1.0_8-mu) * u(ix,0) + 2.0 * mu * u(ix,1)) / (1.0_8 + mu)
-       end do
-    case ("Rad2","RAD2","rad2") ! Radiation boundary
-       do ix = 1,nx
-          mu = (u(ix,1)-u_past(ix,1)) / (u_past(ix,2)-u_past(ix,1))
-          mu = max(0.0_8,mu)
-          mu = min(1.0_8,mu)
-          u_next(ix,0) = (1.0_8-mu) * u(ix,0) + mu * u(ix,1)
-       end do
     end select
     !=================================
     ! Northern boundary condition
@@ -397,21 +357,6 @@ contains
     case ("Gra","GRA","gra") ! Gradient boundary
        do ix = 2,nx
           u_next(ix,ny+1) = u_next(ix,ny)
-       end do
-    case ("Rad","RAD","rad") ! Radiation boundary
-       do ix = 2,nx
-          mu = (u_next(ix,ny)-u_past(ix,ny)) / &
-               &  (2.0_8 * u(ix,ny-1)-u_next(ix,ny)-u_past(ix,ny)+tiny)
-          mu = max(0.0_8,mu)
-          mu = min(1.0_8,mu)
-          u_next(ix,ny+1) = ((1.0_8-mu) * u(ix,ny+1) + 2.0 * mu * u(ix,ny)) / (1.0_8 + mu)
-       end do
-    case ("Rad2","RAD2","rad2") ! Radiation boundary
-       do ix = 2,nx
-          mu = (u(ix,ny)-u_past(ix,ny)) / (u_past(ix,ny-1)-u_past(ix,ny))
-          mu = max(0.0_8,mu)
-          mu = min(1.0_8,mu)
-          u_next(ix,ny+1) = (1.0_8-mu) * u(ix,ny+1) + mu * u(ix,ny)
        end do
     end select
   end subroutine set_bc_u
@@ -426,7 +371,7 @@ contains
     integer :: ix,iy
     real(idx) :: mu,mux,muy
     real(idx) :: tiny=1.0e-20
-    gamma2 = 1.0_8 - slip_ind ! gamma2=1 for slip_ind=0 (du/dx=0),gamma2=-1 for slip_ind=2 (u=0)
+    gamma2 = 1.0_8 - 2.0_idx*slip_ind ! gamma2=1 for slip_ind=0 (du/dx=0),gamma2=-1 for slip_ind=2 (u=0)
     !=================================
     ! Western boundary condition
     !=================================
@@ -438,20 +383,6 @@ contains
     case ("Gra","GRA","gra") ! Gradient boundary
        do iy = 2,ny
           v_next(0,iy) = v_next(1,iy)
-       end do
-    case ("Rad","RAD","rad") ! Radiation boundary
-       do iy = 2,ny
-          mu = (v_next(1,iy)-v_past(1,iy)) / (2.0_8 * v(2,iy)-v_next(1,iy)-v_past(1,iy)+tiny)
-          mu = max(0.0_8,mu)
-          mu = min(1.0_8,mu)
-          v_next(0,iy) = ((1.0_8-mu) * v(0,iy) + 2.0_8 * mu * v(1,iy)) / (1.0_8 + mu)
-       end do
-    case ("Rad2","RAD2","rad2") ! Radiation boundary
-       do iy = 2,ny
-          mu = (v(1,iy)-v_past(1,iy)) / (v_past(2,iy)-v_past(1,iy)+tiny)
-          mu = max(0.0_8,mu)
-          mu = min(1.0_8,mu)
-          v_next(0,iy) = (1.0_8-mu) * v(0,iy) + mu * v(1,iy)
        end do
     end select
     !=================================
@@ -466,20 +397,6 @@ contains
        do iy = 2,ny
           v_next(nx+1,iy) = v_next(nx,iy)
        end do
-    case ("Rad","RAD","rad") ! Radiation boundary
-       do iy = 2,ny
-          mu = (v_next(nx,iy)-v_past(nx,iy)) / (2.0_8 * v(nx-1,iy)-v_next(nx,iy)-v_past(nx,iy)+tiny)
-          mu = max(0.0_8,mu)
-          mu = min(1.0_8,mu)
-          v_next(nx+1,iy) = ((1.0_8-mu) * v(nx+1,iy) + 2.0_8 * mu * v(nx,iy)) / (1.0_8 + mu)
-       end do
-    case ("Rad2","RAD2","rad2") ! Radiation boundary
-       do iy = 2,ny
-          mu = (v(nx,iy)-v_past(nx,iy)) / (v_past(nx-1,iy)-v_past(nx,iy)+tiny)
-          mu = max(0.0_8,mu)
-          mu = min(1.0_8,mu)
-          v_next(nx+1,iy) = (1.0_8-mu) * v(nx+1,iy) + mu * v(nx,iy)
-       end do
     end select
     !=================================
     ! Southern boundary condition
@@ -493,22 +410,6 @@ contains
        do ix = 1,nx
           v_next(ix,1) = v_next(ix,2)
        end do
-    case ("Rad","RAD","rad") ! Radiation boundary
-       do ix = 1,nx
-          mu = (v_next(ix,2)-v_past(ix,2)) / &
-               &  (2.0_8 * v(ix,3)-v_next(ix,2)-v_past(ix,2)+tiny)
-          mu = max(0.0_8,mu)
-          mu = min(1.0_8,mu)
-          v_next(ix,1) = ((1.0_8-mu) * v(ix,1) + 2.0_8 * mu * v(ix,2)) / (1.0_8 + mu)
-       end do
-    case ("Rad2","RAD2","rad2") ! Radiation boundary
-       do ix = 1,nx
-          mu = (v(ix,2)-v_past(ix,2)) / (v_past(ix,3)-v_past(ix,2)+tiny)
-          mu = max(0.0_8,mu)
-          mu = min(1.0_8,mu)
-          v_next(ix,1) = (1.0_8-mu) * v(ix,1) + mu * v(ix,2)
-       end do
-
     end select
     !=================================
     ! Northern boundary condition
@@ -521,21 +422,6 @@ contains
     case ("Gra","GRA","gra") ! Gradient boundary
        do ix = 1,nx
           v_next(ix,ny+1) = v_next(ix,ny)
-       end do
-    case ("Rad","RAD","rad") ! Radiation boundary
-       do ix = 1,nx
-          mu = (v_next(ix,ny)-v_past(ix,ny)) / &
-               &  (2.0_8 * v(ix,ny-1)-v_next(ix,ny)-v_past(ix,ny)+tiny)
-          mu = max(0.0_8,mu)
-          mu = min(1.0_8,mu)
-          v_next(ix,ny+1) = ((1.0_8-mu) * v(ix,ny+1) + 2.0_8 * mu * v(ix,ny)) / (1.0_8 + mu)
-       end do
-    case ("Rad2","RAD2","rad2") ! Radiation boundary
-       do ix = 1,nx
-          mu = (v(ix,ny)-v_past(ix,ny)) / (v_past(ix,ny-1)-v_past(ix,ny)+tiny)
-          mu = max(0.0_8,mu)
-          mu = min(1.0_8,mu)
-          v_next(ix,ny+1) = (1.0_8-mu) * v(ix,ny+1) + mu * v(ix,ny)
        end do
     end select
   end subroutine set_bc_v
@@ -584,13 +470,6 @@ contains
        do ix = 1,nx
           p_next(ix,0) = p_next(ix,1)
        end do
-    case ("Rad","RAD","rad") ! Radiation boundary
-       do ix = 1,nx
-          mu =(p_next(ix,0))
-          mu = max(0.0_8,mu)
-          mu = min(1.0_8,mu)
-          p_next(ix,0) = p(ix,1)+p(ix,2)
-       end do
     end select
     !=================================
     ! Northern boundary condition
@@ -604,15 +483,6 @@ contains
        do ix = 1,nx
           p_next(ix,ny+1) = p_next(ix,ny)
        end do
-    case ("Rad","RAD","rad") ! Radiation boundary
-       do ix = 1,nx
-          mu = (p_next(ix,ny)-p_past(ix,ny)) / &
-               &  (2.0_8 * p(ix,ny-1)-p_next(ix,ny)-p_past(ix,ny))
-          mu = max(0.0_8,mu)
-          mu = min(1.0_8,mu)
-          p_next(ix,ny+1) = ((1.0_8-mu) * p(ix,ny+1) + mu * p(ix,ny)) / (1.0_8 + mu)
-       end do
     end select
-
   end subroutine set_bc_p
 end module ocn_dyn
