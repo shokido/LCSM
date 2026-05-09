@@ -17,11 +17,11 @@ program lcsm_main_vs
   use mod_strf
   ! Time routines
   use calendar_sub
-  use lcsm_param
+  use run_types
   use lcsm_array
   use ocn_dyn  
   implicit none
-  ! Usefull integers
+  type(ocn_set) :: oset
   integer :: ix,iy,im,itime
   integer :: nx_p,ny_p,nm
   real(idx) :: total_time
@@ -29,20 +29,16 @@ program lcsm_main_vs
   real(idx) :: time_int,time_int_uw,time_int_vw,time_int_bn
   integer :: iavg_count
   real(idx) :: tmp
+  character(maxlen) :: fname_in_grid
+  namelist/date/dt,start_yymmdd,start_hhmmss,end_yymmdd,end_hhmmss
+  namelist/grid/fname_in_grid
+  namelist/param_ocn/oset
   !$ double precision st, en
   !$ st = omp_get_wtime()
   !===========================================!
   ! Open namelist files                       !
   !===========================================!
-  open(unit=nmlf_master,file=trim(namelist_master))
-  read(unit=nmlf_master,nml=master)
-  close(nmlf_master)
-  open(unit=nmlf_io,file=trim(namelist_io))
-  open(unit=nmlf_param,file=trim(namelist_param))
-  read(unit=nmlf_io,nml=time)
-  read(unit=nmlf_param,nml=ocn_bdry)
-  read(unit=nmlf_param,nml=ocn_visc)
-  close(nmlf_param)
+  read(5,nml=date)
   !===============================================!
   ! Get information on time                       !
   !===============================================!
@@ -53,7 +49,7 @@ program lcsm_main_vs
   !===============================================!
   ! Read oceanic grid                             !
   !===============================================!
-  read(unit=nmlf_io,nml=grid)
+  read(5,nml=grid)
   call read_ocn_grid(trim(fname_in_grid),nx_p,ny_p,x_p,y_p,x_u,y_u,x_v,y_v,&
        & lon_p,lat_p,lon_u,lat_u,lon_v,lat_v,f,mask_p,damp_p,damp_u,damp_v)
   write(*,*) "**********************************"
@@ -65,15 +61,15 @@ program lcsm_main_vs
   !===============================================!
   allocate(mask_u(1:nx_p+1,0:ny_p+1)) ; allocate(mask_v(0:nx_p+1,1:ny_p+1))
   allocate(mask_phi_u(1:nx_p+1,1:ny_p+1)) ;  allocate(mask_phi_v(1:nx_p+1,1:ny_p+1))
-  call create_mask(nx_p,ny_p,mask_p,mask_u,mask_v,mask_phi_u,mask_phi_v,slip)
+  call set_mask(nx_p,ny_p,mask_p,mask_u,mask_v,mask_phi_u,mask_phi_v,oset%slip_ind)
   ! Viscosity
   allocate(nu(0:nx_p+1,0:ny_p+1))
-  nu = nu_h
+  nu = oset%nu_h
   !===============================================
   ! Read atmospheric data
   !===============================================
   ! Wind stess
-  read(unit=nmlf_io,nml=wind)
+  read(5,nml=wind)
   call read_TLL_p(nx_p,ny_p,fname_in_uw,varname_uw,wind_x,time_uw,start_yymmdd,start_hhmmss)
   call read_TLL_p(nx_p,ny_p,fname_in_vw,varname_vw,wind_y,time_vw,start_yymmdd,start_hhmmss)
   allocate(tau_x(0:nx_p+1,0:ny_p+1)) ; allocate(tau_y(0:nx_p+1,0:ny_p+1))
@@ -85,7 +81,7 @@ program lcsm_main_vs
   !===============================================
   ! Read vertical mode decomposition data (1-D)
   !===============================================
-  read(unit=nmlf_io,nml=strf)
+  read(5,nml=strf)
   nm=get_dimsize(fname_in_cn,"mode"); allocate(cn(1:nm))
   call get_var_1D(fname_in_cn,"cn",cn(1:nm))
   write(*,*) "**************************************"
@@ -101,7 +97,7 @@ program lcsm_main_vs
   !===============================================
   ! Initialize oceanic array
   !===============================================
-  read(unit=nmlf_io,nml=init)
+  read(5,nml=init)
   ! Restart case
   if (in_rst_flag .eq. "T") then
      call read_rst_data(trim(fname_in_rst),nx_p,ny_p,nm,u,v,p,&
@@ -118,7 +114,7 @@ program lcsm_main_vs
   ! Prepare output file
   !===============================================
   ! History file
-  read(unit=nmlf_io,nml=output_hist)
+  read(5,nml=output_hist)
   write(*,*) "Creating output file (history)....."
   write(*,*) "File name= "//trim(fname_out_hist)
   call create_hist(trim(fname_out_hist),nx_p,ny_p,nm,x_p,y_p,x_u,y_u,x_v,y_v,&
@@ -126,7 +122,7 @@ program lcsm_main_vs
        & start_yymmdd,start_hhmmss,end_yymmdd,end_hhmmss,&
        & out_hist_flag,out_hist_int,missing_value,istep_hist,ntime_hist)
   ! Average file
-  read(unit=nmlf_io,nml=output_avg)
+  read(5,nml=output_avg)
   write(*,*) "Creating output file (average)....."
   write(*,*) "File name= "//trim(fname_out_avg)
   call create_avg(trim(fname_out_avg),nx_p,ny_p,nm,x_p,y_p,x_u,y_u,x_v,y_v,&
@@ -138,7 +134,8 @@ program lcsm_main_vs
   allocate(p_avg(1:nm,0:nx_p+1,0:ny_p+1)); p_avg=p
   allocate(tau_x_avg(0:nx_p+1,0:ny_p+1)) ; tau_x_avg=0.0_idx
   allocate(tau_y_avg(0:nx_p+1,0:ny_p+1)) ; tau_y_avg=0.0_idx
-
+  read(5,nml=output_rst)
+  read(5,nml=param_ocn)
   ! ======================!
   !  Start point of loop  !
   ! ======================!
@@ -148,7 +145,6 @@ program lcsm_main_vs
   write(*,*) "Number of points= ",nx_p,"(x),",ny_p,"(y)"
   write(*,*) "Total vertical modes=",nm
   write(*,*) "Number of timestep=",ntime
-!  ntime=1
   do itime = 1,ntime
      iavg_count = iavg_count + 1
      time_int=dt*itime
@@ -189,22 +185,22 @@ program lcsm_main_vs
      do im = 1,nm
         call dyn_shallow_p(nx_p,ny_p,x_p,y_p,x_u,y_u,x_v,y_v,mask_p,damp_p,&
              & u(im,1:nx_p+1,0:ny_p+1),v(im,0:nx_p+1,1:ny_p+1),p(im,0:nx_p+1,0:ny_p+1),&
-             & p_past(im,0:nx_p+1,0:ny_p+1),p_next(im,0:nx_p+1,0:ny_p+1),cn(im),bn(im,0:nx_p+1,0:ny_p+1),dt)
+             & p_past(im,0:nx_p+1,0:ny_p+1),p_next(im,0:nx_p+1,0:ny_p+1),cn(im),bn(im,0:nx_p+1,0:ny_p+1),dt,oset)
         call dyn_shallow_u(nx_p,ny_p,x_p,y_p,x_u,y_u,x_v,y_v,f,mask_u,mask_phi_u,damp_u,nu,tau_x,&
              & u(im,1:nx_p+1,0:ny_p+1),v(im,0:nx_p+1,1:ny_p+1),p(im,0:nx_p+1,0:ny_p+1),&
-             & u_past(im,1:nx_p+1,0:ny_p+1),u_next(im,1:nx_p+1,0:ny_p+1),cn(im),bn(im,0:nx_p+1,0:ny_p+1),dt,A)
+             & u_past(im,1:nx_p+1,0:ny_p+1),u_next(im,1:nx_p+1,0:ny_p+1),cn(im),bn(im,0:nx_p+1,0:ny_p+1),dt,oset)
         call dyn_shallow_v(nx_p,ny_p,x_p,y_p,x_u,y_u,x_v,y_v,f,mask_v,mask_phi_v,damp_v,nu,tau_y,&
              & u(im,1:nx_p+1,0:ny_p+1),v(im,0:nx_p+1,1:ny_p+1),p(im,0:nx_p+1,0:ny_p+1),&
-             & v_past(im,0:nx_p+1,1:ny_p+1),v_next(im,0:nx_p+1,1:ny_p+1),cn(im),bn(im,0:nx_p+1,0:ny_p+1),dt,A)
+             & v_past(im,0:nx_p+1,1:ny_p+1),v_next(im,0:nx_p+1,1:ny_p+1),cn(im),bn(im,0:nx_p+1,0:ny_p+1),dt,oset)
         ! Apply asselin fiter
         p(im,0:nx_p+1,0:ny_p+1) = p(im,0:nx_p+1,0:ny_p+1) + 0.5_idx * 0.2_idx * mask_p*(p_next(im,0:nx_p+1,0:ny_p+1) + p_past(im,0:nx_p+1,0:ny_p+1)-2.0_idx*p(im,0:nx_p+1,0:ny_p+1))
         u(im,1:nx_p+1,0:ny_p+1) = u(im,1:nx_p+1,0:ny_p+1) + 0.5_idx * 0.2_idx * mask_u*(u_next(im,1:nx_p+1,0:ny_p+1) + u_past(im,1:nx_p+1,0:ny_p+1)-2.0_idx*u(im,1:nx_p+1,0:ny_p+1))
         v(im,0:nx_p+1,1:ny_p+1) = v(im,0:nx_p+1,1:ny_p+1) + 0.5_idx * 0.2_idx * mask_v*(v_next(im,0:nx_p+1,1:ny_p+1) + v_past(im,0:nx_p+1,1:ny_p+1)-2.0_idx*v(im,0:nx_p+1,1:ny_p+1))
         !
         ! Apply boundary conditions
-        call set_bc_p(nx_p,ny_p,p(im,0:nx_p+1,0:ny_p+1),p_past(im,0:nx_p+1,0:ny_p+1),p_next(im,0:nx_p+1,0:ny_p+1),wbc_p,ebc_p,nbc_p,sbc_p)
-        call set_bc_u(nx_p,ny_p,u(im,1:nx_p+1,0:ny_p+1),u_past(im,1:nx_p+1,0:ny_p+1),u_next(im,1:nx_p+1,0:ny_p+1),wbc_u,ebc_u,nbc_u,sbc_u,slip)
-        call set_bc_v(nx_p,ny_p,v(im,0:nx_p+1,1:ny_p+1),v_past(im,0:nx_p+1,1:ny_p+1),v_next(im,0:nx_p+1,1:ny_p+1),wbc_v,ebc_v,nbc_v,sbc_v,slip)
+        call set_bc_p(nx_p,ny_p,p(im,0:nx_p+1,0:ny_p+1),p_past(im,0:nx_p+1,0:ny_p+1),p_next(im,0:nx_p+1,0:ny_p+1),oset%wbc_p,oset%ebc_p,oset%nbc_p,oset%sbc_p)
+        call set_bc_u(nx_p,ny_p,u(im,1:nx_p+1,0:ny_p+1),u_past(im,1:nx_p+1,0:ny_p+1),u_next(im,1:nx_p+1,0:ny_p+1),oset%wbc_u,oset%ebc_u,oset%nbc_u,oset%sbc_u,oset%slip_ind)
+        call set_bc_v(nx_p,ny_p,v(im,0:nx_p+1,1:ny_p+1),v_past(im,0:nx_p+1,1:ny_p+1),v_next(im,0:nx_p+1,1:ny_p+1),oset%wbc_v,oset%ebc_v,oset%nbc_v,oset%sbc_v,oset%slip_ind)
         u_avg(im,1:nx_p+1,0:ny_p+1)=u_avg(im,1:nx_p+1,0:ny_p+1)+&
              & u(im,1:nx_p+1,0:ny_p+1)
         v_avg(im,0:nx_p+1,1:ny_p+1)=v_avg(im,0:nx_p+1,1:ny_p+1)+&
@@ -223,6 +219,8 @@ program lcsm_main_vs
      !Output history file (snapshots)
      if (itime .eq. istep_hist(ihist)) then
         write(*,*) "Step (history) =",ihist," ",itime
+        write(*,*) mask_u(1,0:10),"m"
+        write(*,*) u(1,1,0:10)
         call write_hist(trim(fname_out_hist),nx_p,ny_p,nm,ihist,u,v,p,&
              & mask_u,mask_v,mask_p,missing_value)
         call write_hist_2d(trim(fname_out_hist),nx_p,ny_p,ihist,tau_x,tau_y,&
@@ -245,8 +243,6 @@ program lcsm_main_vs
   !$ print *, "Elapsed time :", en-st
   ! 
   ! Output restart file
-  read(unit=nmlf_io,nml=output_rst)
-  close(nmlf_io)
   if (out_rst_flag .eq. "T") then
      call create_rst(trim(fname_out_rst),nx_p,ny_p,nm,x_p,y_p,x_u,y_u,x_v,y_v,&
           & lon_p,lat_p,lon_u,lat_u,lon_v,lat_v,&
