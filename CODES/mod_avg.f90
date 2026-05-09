@@ -59,10 +59,14 @@ contains
     call writenet_dd(trim(fname),nx+2,"x_v")
     call writenet_dd(trim(fname),ny+1,"y_v")
 
-    call writenet_dv(trim(fname),"x_u",2,(/"x_u","lon_u"/),(/"m","degrees_east"/),missing_value)
-    call writenet_dv(trim(fname),"y_u",2,(/"y_u","lat_u"/),(/"m","degrees_north"/),missing_value)
-    call writenet_dv(trim(fname),"x_v",2,(/"x_v","lon_v"/),(/"m","degrees_east"/),missing_value)
-    call writenet_dv(trim(fname),"y_v",2,(/"y_v","lat_v"/),(/"m","degrees_north"/),missing_value)
+    call writenet_dv(trim(fname),"x_u",1,(/"x_u"/),(/"m"/),missing_value)
+    call writenet_dv(trim(fname),"x_u",1,(/"lon_u"/),(/"degrees_east"/),missing_value)
+    call writenet_dv(trim(fname),"y_u",1,(/"y_u"/),(/"m"/),missing_value)
+    call writenet_dv(trim(fname),"y_u",1,(/"lat_u"/),(/"degrees_north"/),missing_value)
+    call writenet_dv(trim(fname),"x_v",1,(/"x_v"/),(/"m"/),missing_value)
+    call writenet_dv(trim(fname),"x_v",1,(/"lon_v"/),(/"degrees_east"/),missing_value)
+    call writenet_dv(trim(fname),"y_v",1,(/"y_v"/),(/"m"/),missing_value)
+    call writenet_dv(trim(fname),"y_v",1,(/"lat_v"/),(/"degrees_north"/),missing_value)
     call writenet_dv(trim(fname),"x_p",1,(/"lon_p"/),(/"degrees_east"/),missing_value)
     call writenet_dv(trim(fname),"y_p",1,(/"lat_p"/),(/"degrees_north"/),missing_value)
 
