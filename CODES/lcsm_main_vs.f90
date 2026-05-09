@@ -30,8 +30,14 @@ program lcsm_main_vs
   integer :: iavg_count
   real(idx) :: tmp
   character(maxlen) :: fname_in_grid
+  ! History file
+  integer :: out_hist_flag,out_hist_int
+  character(maxlen) :: fname_out_hist
+  ! Namelist
   namelist/date/dt,start_yymmdd,start_hhmmss,end_yymmdd,end_hhmmss
   namelist/grid/fname_in_grid
+  namelist/output_hist/out_hist_flag,out_hist_int
+  namelist/output_hist/fname_out_hist
   namelist/param_ocn/oset
   !$ double precision st, en
   !$ st = omp_get_wtime()

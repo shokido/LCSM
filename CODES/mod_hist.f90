@@ -6,11 +6,6 @@ module mod_hist
   integer :: ntime_hist,ihist
   real(idx),allocatable :: time_hist(:)
   integer,allocatable :: istep_hist(:)  
-  integer :: out_hist_flag,out_hist_int
-  character(maxlen) :: fname_out_hist
-  ! Namelist
-  namelist/output_hist/out_hist_flag,out_hist_int
-  namelist/output_hist/fname_out_hist
 contains
   !==========================
   ! Creation of history file
