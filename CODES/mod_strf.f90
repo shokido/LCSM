@@ -1,6 +1,7 @@
 module mod_strf
   use run_param
   use input_files
+  use mod_io_master
   implicit none
   ! BN file name
   integer :: ind1_bn,ind2_bn
@@ -18,7 +19,7 @@ contains
     integer :: nt,im
     real(idx),allocatable :: time_tmp(:)
     character(len=maxlen) :: time_units
-    nt=get_dimsize(fname,"time")
+    call get_dimsize(fname,"time",nt)
     allocate(time_tmp(nt)) ; allocate(time(nt))
     call get_var_1D(fname,"time",time_tmp)
     call get_var_units(fname,"time",time_units)

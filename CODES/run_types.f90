@@ -16,6 +16,9 @@ module run_types
   type :: vector_3d
      real(idx),allocatable :: val(:,:,:)
   end type vector_3d
+  type :: vector_4d
+     real(idx),allocatable :: val(:,:,:,:)
+  end type vector_4d
   type :: ocn_set
   real(idx) :: A ! in  [m^2/s^3]
   real(idx) :: rho0=1024.0 ! in  [kg/m^3]

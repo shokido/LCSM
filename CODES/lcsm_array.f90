@@ -26,6 +26,8 @@ module lcsm_array
   real(idx),allocatable :: u_past(:,:,:),v_past(:,:,:),p_past(:,:,:)
   real(idx),allocatable :: u_next(:,:,:),v_next(:,:,:),p_next(:,:,:)
 
+  ! Wind stress array
+  real(idx),allocatable :: tau_x(:,:),tau_y(:,:)
   ! Vertical modal function arrays
   real(idx),allocatable :: cn(:)
   real(idx),allocatable :: bn(:,:,:)

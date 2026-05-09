@@ -1,6 +1,7 @@
 module mod_grid
   use run_param
   use input_files
+  use ncdf_read
   implicit none
   private
   public :: set_mask
@@ -60,11 +61,14 @@ contains
     real(idx),allocatable,intent(inout) :: f(:)
     real(idx),allocatable,intent(inout) :: mask_p(:,:)
     real(idx),allocatable,intent(inout) :: damp_p(:,:),damp_u(:,:),damp_v(:,:)
+    integer ::ntmp
     ! Get grid
     ! Grid generation------------------------------------------------
     ! p(0:nx+1,0:ny+1)
-    nx=get_dimsize(fname,"x_p")-2
-    ny=get_dimsize(fname,"y_p")-2
+    call get_dimsize(fname,"x_p",ntmp)
+    nx=ntmp-2
+    call get_dimsize(fname,"y_p",ntmp)
+    ny=ntmp-2
     allocate(x_p(0:nx+1)) ; allocate(y_p(0:ny+1))
     allocate(x_u(1:nx+1)) ; allocate(y_u(0:ny+1))
     allocate(x_v(0:nx+1)) ; allocate(y_v(1:ny+1))
