@@ -3,16 +3,10 @@ module mod_strf
   use input_files
   implicit none
   ! BN file name
-  character(maxlen) :: fname_in_cn
-  character(maxlen) :: fname_in_bn,varname_bn
   integer :: ind1_bn,ind2_bn
   real(idx) :: wgt1_bn,wgt2_bn
-  character(1) :: Lcycle_bn
-  real(idx) :: Tcycle_bn
   real(idx),allocatable :: time_bn(:)
   real(idx),allocatable :: bn_in(:,:,:,:)
-  namelist/strf/fname_in_cn
-  namelist/strf/fname_in_bn,varname_bn,Lcycle_bn,Tcycle_bn
 contains
   subroutine read_vm_data_nd(nx,ny,nm,fname,varname,data,time,start_yymmdd,start_hhmmss)
     implicit none

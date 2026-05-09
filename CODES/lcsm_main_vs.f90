@@ -42,6 +42,11 @@ program lcsm_main_vs
   ! Output  restart file
   character(1) :: out_rst_flag
   character(maxlen) :: fname_out_rst
+  ! Stratification file
+  character(maxlen) :: fname_in_cn
+  character(maxlen) :: fname_in_bn,varname_bn
+  character(1) :: Lcycle_bn
+  real(idx) :: Tcycle_bn
   ! Namelist
   namelist/date/dt,start_yymmdd,start_hhmmss,end_yymmdd,end_hhmmss
   namelist/grid/fname_in_grid
@@ -51,6 +56,8 @@ program lcsm_main_vs
   namelist/output_avg/fname_out_avg
   namelist/init/in_rst_flag,fname_in_rst
   namelist/output_rst/out_rst_flag,fname_out_rst
+  namelist/strf/fname_in_cn
+  namelist/strf/fname_in_bn,varname_bn,Lcycle_bn,Tcycle_bn
   namelist/param_ocn/oset
   !$ double precision st, en
   !$ st = omp_get_wtime()
