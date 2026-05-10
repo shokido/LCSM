@@ -20,7 +20,7 @@ program lcsm_main_vs
   use ocn_dyn  
   implicit none
   type(ocn_set) :: oset
-  integer :: ix,iy,im,itime
+  integer :: ix,iy,im,itime,ifile
   integer :: nx_p,ny_p,nm
   real(idx) :: total_time
   integer :: ntime
@@ -54,8 +54,14 @@ program lcsm_main_vs
   character(len=maxlen) :: timename_ocn_tauy,varname_ocn_tauy
   character(1) :: Lcycle_ocn_tauy
   real(idx) :: Tcycle_ocn_tauy
-  ! Stratification file
-  character(maxlen) :: fname_in_cn
+  ! Phase speed
+  type(TLLL_dta) :: ocn_cn_dta
+  integer :: nfile_ocn_cn
+  character(len=maxlen),allocatable :: fnames_ocn_cn(:)
+  character(len=maxlen) :: timename_ocn_cn,varname_ocn_cn
+  character(1) :: Lcycle_ocn_cn
+  real(idx) :: Tcycle_ocn_cn
+  ! Wind projection coefficient
   type(TLLL_dta) :: ocn_obn_dta
   integer :: nfile_ocn_obn
   character(len=maxlen),allocatable :: fnames_ocn_obn(:)
@@ -75,7 +81,8 @@ program lcsm_main_vs
   namelist/taux_io_ocn/fnames_ocn_taux
   namelist/tauy_param_ocn/nfile_ocn_tauy,timename_ocn_tauy,varname_ocn_tauy,Lcycle_ocn_tauy,Tcycle_ocn_tauy
   namelist/tauy_io_ocn/fnames_ocn_tauy
-  namelist/strf/fname_in_cn
+  namelist/cn_param_ocn/nfile_ocn_cn,timename_ocn_cn,varname_ocn_cn,Lcycle_ocn_cn,Tcycle_ocn_cn
+  namelist/cn_io_ocn/fnames_ocn_cn
   namelist/obn_param_ocn/nfile_ocn_obn,timename_ocn_obn,varname_ocn_obn,Lcycle_ocn_obn,Tcycle_ocn_obn
   namelist/obn_io_ocn/fnames_ocn_obn
   namelist/param_ocn/oset
@@ -130,16 +137,29 @@ program lcsm_main_vs
   allocate(tau_x(0:nx_p+1,0:ny_p+1)) ; allocate(tau_y(0:nx_p+1,0:ny_p+1))
   write(*,*) "**********************************"
   write(*,*) "Finish reading wind data"
+  do ifile =1,nfile_ocn_taux
+       write(*,*) "zonal wind stress file name= "//trim(fnames_ocn_taux(ifile))
+  end do
+  do ifile =1,nfile_ocn_tauy
+       write(*,*) "meridional wind stress file name= "//trim(fnames_ocn_tauy(ifile))
+  end do
   write(*,*) "**********************************"
   !===============================================
   ! Read vertical mode decomposition data (1-D)
   !===============================================
-  read(5,nml=strf)
-  call get_dimsize(fname_in_cn,"mode",nm); allocate(cn(1:nm))
-  call get_variable(trim(fname_in_cn),"cn",(/1/),(/nm/),cn)
+  read(5,cn_param_ocn)
+  allocate(fnames_ocn_cn(nfile_ocn_cn))
+  read(5,cn_io_ocn)
+  call get_dimsize(fnames_ocn_cn(1),"mode",nm)
+  call read_data_TLLL_p(nfile_ocn_cn,fnames_ocn_cn,timename_ocn_cn,varname_ocn_cn,&
+       & nx_p,ny_p,nm,ocn_cn_dta,start_yymmdd,start_hhmmss) ! cn
+  ocn_cn_dta%Lcycle=Lcycle_ocn_cn;ocn_cn_dta%Tcycle=Tcycle_ocn_cn
+  allocate(cn(1:nm,0:nx_p+1,0:ny_p+1))
   write(*,*) "**************************************"
   write(*,*) "Finish reading cn data"
-  write(*,*) "VM file name= "//trim(fname_in_cn)
+  do ifile =1,nfile_ocn_cn
+       write(*,*) "Phase speed file name= "//trim(fnames_ocn_cn(ifile))
+  end do
   write(*,*) "*************************************"
   read(5,obn_param_ocn)
   allocate(fnames_ocn_obn(nfile_ocn_obn))
@@ -150,6 +170,9 @@ program lcsm_main_vs
   allocate(obn(1:nm,0:nx_p+1,0:ny_p+1))
   write(*,*) "**********************************"
   write(*,*) "Finish reading obn data"
+  do ifile =1,nfile_ocn_obn
+       write(*,*) "obn file name= "//trim(fnames_ocn_obn(ifile))
+  end do
   write(*,*) "**********************************"
   !===============================================
   ! Initialize oceanic array
@@ -211,12 +234,16 @@ program lcsm_main_vs
      ! Meridional wind stress
      call get_data_TLL_p(time_int,start_yymmdd,start_hhmmss,nx_p,ny_p,ocn_tauy_dta)
      tau_y=ocn_tauy_dta%data_now%val
-     ! Bn
+     ! Phase speed of gravity wave
+     call get_data_TLLL_p(time_int,start_yymmdd,start_hhmmss,nx_p,ny_p,nm,ocn_cn_dta)
+     do im = 1,nm
+          cn(im,0:nx_p,0:ny_p)=ocn_cn_dta%data_now%val(0:nx_p,0:ny_p,im)
+     end do
+     ! Inverse of wind-trapping coefficient
      call get_data_TLLL_p(time_int,start_yymmdd,start_hhmmss,nx_p,ny_p,nm,ocn_obn_dta)
      do im = 1,nm
           obn(im,0:nx_p,0:ny_p)=ocn_obn_dta%data_now%val(0:nx_p,0:ny_p,im)
      end do
-
      tau_x_avg=tau_x_avg+tau_x;tau_y_avg=tau_y_avg+tau_y
 
      !$omp parallel private(iy,ix)
@@ -224,13 +251,13 @@ program lcsm_main_vs
      do im = 1,nm
         call dyn_shallow_p(nx_p,ny_p,x_p,y_p,x_u,y_u,x_v,y_v,mask_p,damp_p,&
              & u(im,1:nx_p+1,0:ny_p+1),v(im,0:nx_p+1,1:ny_p+1),p(im,0:nx_p+1,0:ny_p+1),&
-             & p_past(im,0:nx_p+1,0:ny_p+1),p_next(im,0:nx_p+1,0:ny_p+1),cn(im),obn(im,0:nx_p+1,0:ny_p+1),dt,oset)
+             & p_past(im,0:nx_p+1,0:ny_p+1),p_next(im,0:nx_p+1,0:ny_p+1),cn(im,0:nx_p+1,0:ny_p+1),obn(im,0:nx_p+1,0:ny_p+1),dt,oset)
         call dyn_shallow_u(nx_p,ny_p,x_p,y_p,x_u,y_u,x_v,y_v,f,mask_u,mask_phi_u,damp_u,nu,tau_x,&
              & u(im,1:nx_p+1,0:ny_p+1),v(im,0:nx_p+1,1:ny_p+1),p(im,0:nx_p+1,0:ny_p+1),&
-             & u_past(im,1:nx_p+1,0:ny_p+1),u_next(im,1:nx_p+1,0:ny_p+1),cn(im),obn(im,0:nx_p+1,0:ny_p+1),dt,oset)
+             & u_past(im,1:nx_p+1,0:ny_p+1),u_next(im,1:nx_p+1,0:ny_p+1),cn(im,0:nx_p+1,0:ny_p+1),obn(im,0:nx_p+1,0:ny_p+1),dt,oset)
         call dyn_shallow_v(nx_p,ny_p,x_p,y_p,x_u,y_u,x_v,y_v,f,mask_v,mask_phi_v,damp_v,nu,tau_y,&
              & u(im,1:nx_p+1,0:ny_p+1),v(im,0:nx_p+1,1:ny_p+1),p(im,0:nx_p+1,0:ny_p+1),&
-             & v_past(im,0:nx_p+1,1:ny_p+1),v_next(im,0:nx_p+1,1:ny_p+1),cn(im),obn(im,0:nx_p+1,0:ny_p+1),dt,oset)
+             & v_past(im,0:nx_p+1,1:ny_p+1),v_next(im,0:nx_p+1,1:ny_p+1),cn(im,0:nx_p+1,0:ny_p+1),obn(im,0:nx_p+1,0:ny_p+1),dt,oset)
         ! Apply asselin fiter
         call asselin_filter_p(nx_p,ny_p,mask_p,p(im,0:nx_p+1,0:ny_p+1),p_past(im,0:nx_p+1,0:ny_p+1),p_next(im,0:nx_p+1,0:ny_p+1))
         call asselin_filter_u(nx_p,ny_p,mask_u,u(im,1:nx_p+1,0:ny_p+1),u_past(im,1:nx_p+1,0:ny_p+1),u_next(im,1:nx_p+1,0:ny_p+1))

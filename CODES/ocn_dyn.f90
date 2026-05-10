@@ -92,7 +92,7 @@ contains
     real(idx),intent(in) :: u(1:nx+1,0:ny+1),v(0:nx+1,1:ny+1),p(0:nx+1,0:ny+1)
     real(idx),intent(in) :: p_past(0:nx+1,0:ny+1)
     real(idx),intent(inout) :: p_next(0:nx+1,0:ny+1)
-    real(idx),intent(in) :: dt,cn,obn(0:nx+1,0:ny+1)
+    real(idx),intent(in) :: dt,cn(0:nx+1,0:ny+1),obn(0:nx+1,0:ny+1)
     type(ocn_set),intent(in) :: oset
     integer :: ix,iy
     real(idx) :: dudx,dvdy,drag_p,rhs_p
@@ -104,9 +104,9 @@ contains
           !=================================
           ! p equation
           !=================================
-          drag_p = -1.0_idx * p(ix,iy) * (oset%A / (cn**2)+damp_p(ix,iy))
-          dudx=-1.0_idx*(cn**2)*(u(ix+1,iy)-u(ix,iy)) / (x_u(ix+1)-x_u(ix))
-          dvdy=-1.0_idx*(cn**2)*(v(ix,iy+1)-v(ix,iy)) / (y_v(iy+1)-y_v(iy))
+          drag_p = -1.0_idx * p(ix,iy) * (oset%A / (cn(ix,iy)**2)+damp_p(ix,iy))
+          dudx=-1.0_idx*(cn(ix,iy)**2)*(u(ix+1,iy)-u(ix,iy)) / (x_u(ix+1)-x_u(ix))
+          dvdy=-1.0_idx*(cn(ix,iy)**2)*(v(ix,iy+1)-v(ix,iy)) / (y_v(iy+1)-y_v(iy))
           rhs_p=drag_p + dudx + dvdy
           p_next(ix,iy)=p_past(ix,iy)+2.0_idx*dt*mask_rho(ix,iy)*rhs_p          
        end do
@@ -126,11 +126,12 @@ contains
     real(idx),intent(in) :: u_past(1:nx+1,0:ny+1)
     real(idx),intent(inout) :: u_next(1:nx+1,0:ny+1)
     type(ocn_set),intent(in) :: oset
-    real(idx),intent(in) :: dt,cn,obn(0:nx+1,0:ny+1)
+    real(idx),intent(in) :: dt,cn(0:nx+1,0:ny+1),obn(0:nx+1,0:ny+1)
     integer :: ix,iy
     real(idx) :: corx,pgrdx,tx,diffu,drag_u,rhs_u
     real(idx) :: dudx_e,dudx_w,dudy_n,dudy_s
     real(idx) :: sigma_n,sigma_s,sigma_w,sigma_e
+    real(idx) :: cn_local
     !
     ! u    x:2~nx # 1:WB nx+1:EB
     !      y:1~ny # 0:SB ny+1:NB
@@ -139,7 +140,8 @@ contains
           !=================================
           ! U equation
           !=================================
-          drag_u = -1.0_idx * u(ix,iy) * (oset%A / (cn**2)+damp_u(ix,iy))
+          cn_local= 0.5_idx*(cn(ix-1,iy)+cn(ix,iy))
+          drag_u = -1.0_idx * u(ix,iy) * (oset%A / (cn_local**2)+damp_u(ix,iy))
           corx= 0.125_idx * ((f(ix,iy)+f(ix,iy+1))*(v(ix,iy+1)+v(ix-1,iy+1)) + &
                & (f(ix,iy-1)+f(ix,iy)) * (v(ix,iy)+v(ix-1,iy)))                 ! Coriolis force
           !corx= 0.25_idx * f(ix,iy) * (v(ix,iy+1)+v(ix-1,iy+1)+v(ix,iy)+v(ix-1,iy)) ! Coriolis force (ENS conserve) 
@@ -173,11 +175,12 @@ contains
     real(idx),intent(in) :: v_past(0:nx+1,1:ny+1)
     real(idx),intent(inout) :: v_next(0:nx+1,1:ny+1)
     type(ocn_set),intent(in) :: oset
-    real(idx),intent(in) :: dt,cn,obn(0:nx+1,0:ny+1)
+    real(idx),intent(in) :: dt,cn(0:nx+1,0:ny+1),obn(0:nx+1,0:ny+1)
     integer :: ix,iy
     real(idx) :: cory,pgrdy,ty,diffv,drag_v,rhs_v
     real(idx) :: dvdx_e,dvdx_w,dvdy_n,dvdy_s
     real(idx) :: sigma_n,sigma_s,sigma_w,sigma_e
+    real(idx) :: cn_local
     ! v    x:1~nx # 0:WB nx+1:EB
     !      y:2~ny # 1:SB ny+1:NB
     do iy = 2,ny
@@ -185,7 +188,8 @@ contains
           !=================================
           ! V equation
           !=================================
-          drag_v = -1.0_idx * v(ix,iy) * (oset%A / (cn**2)+damp_v(ix,iy))
+          cn_local= 0.5_idx*(cn(ix,iy-1)+cn(ix,iy))
+          drag_v = -1.0_idx * v(ix,iy) * (oset%A / (cn_local**2)+damp_v(ix,iy))
           cory = -0.125_idx * (f(ix,iy)+f(ix,iy-1))*(u(ix,iy-1)+u(ix+1,iy-1)+u(ix,iy)+u(ix+1,iy)) ! Coriolis force(ENS conserve)
           !cory = -0.25_idx *  (f(ix,iy) * u(ix,iy)+ f(ix,iy)* u(ix+1,iy)+f(ix,iy-1) * u(ix,iy-1)+ f(ix,iy-1)* u(ix+1,iy-1))! Coriolis force (ENG conserve) !
           pgrdy=-1.0_idx*(p(ix,iy)-p(ix,iy-1)) / (y_rho(iy)-y_rho(iy-1)) ! pressure gradient force

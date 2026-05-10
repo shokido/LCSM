@@ -29,7 +29,7 @@ module lcsm_array
   ! Wind stress array
   real(idx),allocatable :: tau_x(:,:),tau_y(:,:)
   ! Vertical modal function arrays
-  real(idx),allocatable :: cn(:)
+  real(idx),allocatable :: cn(:,:,:)
   real(idx),allocatable :: obn(:,:,:)
 
   ! Viscocity
