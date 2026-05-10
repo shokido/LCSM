@@ -47,7 +47,7 @@ nc_mask['lon'][:]=lon[:]
 nc_mask['lat'][:]=lat[:]
 nc_mask['mode'][:]=modes[:]
 nc_mask['time'][:]=time_in[:]
-nc_mask['cn'][0,:,:,:]=cn_mean[:,np.newaxis,np.newaxis]*mask
+nc_mask['cn'][0,:,:,:]=cn_mean[:,np.newaxis,np.newaxis]#*mask
 nc_mask.close()
 
 
