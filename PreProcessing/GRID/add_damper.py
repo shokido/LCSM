@@ -3,8 +3,9 @@ import netCDF4 as ncdf
 import sys
 factor=1.0/(60.0*60.0*24.0)
 
-grid_name="indian"
-fname_grid="grid_"+grid_name+".nc"
+gname="indian"
+gname="eqpac_30"
+fname_grid="grid_"+gname+".nc"
 nc1=ncdf.Dataset(fname_grid,"r+")
 y_u=nc1.variables["y_u"][:]
 damp_u=nc1.variables["damp_u"]

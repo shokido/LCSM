@@ -7,12 +7,11 @@ import subprocess
 
 fname_grid="grid_indian.nc"
 fname_gdes="gdes_grid_indian.dat"
-lon_w=28.0
-lon_e=114.0
-lat_s=-25.0
-lat_n=25.0
-dlon=1.0
-dlat=1.0
+lon_w=28.0;lon_e=114.0;lat_s=-25.0;lat_n=25.0;dlon=1.0;dlat=1.0
+gname="eqpac_30"
+lon_w=110.0;lon_e=300.0;lat_s=-30.0;lat_n=30.0;dlon=2.5;dlat=1.0
+fname_grid="grid_"+gname+".nc"
+fname_gdes="gdes_grid_"+gname+".dat"
 missing_value=9999.0
 
 def cal_dis_lon_lat(lon1,lon2,lat1,lat2):

@@ -1,19 +1,19 @@
 import subprocess
 import netCDF4 as ncdf
 import numpy as np
-grd_name='indian'
-
-fname_gdes='../GRID/gdes_grid_'+grd_name+'.dat'
+gname='indian'
+gname="eqpac_30"
+fname_gdes='../GRID/gdes_grid_'+gname+'.dat'
 fname_topo='../DATA/etopo5.nc'
-fname_grid='grid_'+grd_name+'.nc'
+fname_grid='grid_'+gname+'.nc'
 varname='topo'
 lonname='lon'
 latname='lat'
-fname_mask='mask_'+grd_name+'.nc'
+fname_mask='mask_'+gname+'.nc'
 hthres=-100.0
 
 # Remap topography
-fname_tmp='topo_'+grd_name+'.nc'
+fname_tmp='topo_'+gname+'.nc'
 command='cdo remapbil,'+fname_gdes+' '+fname_topo+' '+fname_tmp
 subprocess.call(command.split())
 
@@ -36,15 +36,15 @@ mask[index_topo[0],index_topo[1]]=0.0
 nc_topo.close()
 
 nc_mask=ncdf.Dataset(fname_mask,'w')
-nc_mask.createDimension(lonname,len(lon[:]))
-nc_mask.createDimension(latname,len(lat[:]))
-nc_mask.createVariable(lonname,lon.dtype,(lonname))
-nc_mask.createVariable(latname,lat.dtype,(latname))
-nc_mask.createVariable('topo',mask.dtype,(latname,lonname))
-nc_mask.createVariable('mask_p',mask.dtype,(latname,lonname))
-nc_mask[lonname][:]=lon[:]
-nc_mask[latname][:]=lat[:]
-nc_mask['mask_p'][:]=mask[:]
+nc_mask.createDimension('lon',len(lon[:]))
+nc_mask.createDimension('lat',len(lat[:]))
+nc_mask.createVariable('lon',lon.dtype,('lon'))
+nc_mask.createVariable('lat',lat.dtype,('lat'))
+nc_mask.createVariable('topo',mask.dtype,('lat','lon'))
+nc_mask.createVariable('mask',mask.dtype,('lat','lon'))
+nc_mask['lon'][:]=lon[:]
+nc_mask['lat'][:]=lat[:]
+nc_mask['mask'][:]=mask[:]
 nc_mask['topo'][:]=topo[:]
 nc_mask.close()
 command='rm '+fname_tmp
