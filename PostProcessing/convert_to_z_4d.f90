@@ -37,13 +37,11 @@ program convert_to_z_4d
   integer :: im1,im2,ifile
   namelist/param/im1,im2,nfile
   namelist/fnames/fname_grid,fname_lev,fname_strf,fname_ocn,fname_out
-  open(10,file="filenames_convert_to_z_4d.nml",status="old")
-  read(10,nml=param)
-  write(*,*) "sa"
+  read(5,nml=param)
   allocate(fname_strf(nfile))
   allocate(fname_ocn(nfile))
   allocate(fname_out(nfile))
-  read(10,nml=fnames)
+  read(5,nml=fnames)
   varnames_out(1)="p"; varunits_out(1)="m^2/s^2"
   varnames_out(2)="u"; varunits_out(2)="m/s"
   varnames_out(3)="v"; varunits_out(3)="m/s"
@@ -57,27 +55,31 @@ program convert_to_z_4d
      read(20,*) lev_out(iz)
   end do
   close(20)
-
   !===============================================
   ! Read oceanic grid
   !===============================================
   do ifile=1,nfile
      ! Get vertical coordinate
-     call get_variable(trim(fname_strf(ifile)),"lev","lev",nlev,lev)
+     call get_dimsize(trim(fname_strf(ifile)),"lon",nx_p)
+     call get_dimsize(trim(fname_strf(ifile)),"lat",ny_p)
+     call get_dimsize(trim(fname_strf(ifile)),"mode",nm)
+     call get_dimsize(trim(fname_strf(ifile)),"lev",nlev)
+     call get_variable(trim(fname_strf(ifile)),"lev",(/1/),(/nlev/),lev)
      call get_attribute(trim(fname_strf(ifile)),"lev","units",lev_unit)
      ! Get modal function
-     call get_variable(trim(fname_strf(ifile)),"lon","lat","lev","mode","phi",nx_p,ny_p,nlev,nm,phi)
-     call get_variable(trim(fname_strf(ifile)),"lon","lat","lev","mode","phidz",nx_p,ny_p,nlev,nm,phidz)
-     call get_variable(trim(fname_strf(ifile)),"lon","lat","lev","mode","psi_w",nx_p,ny_p,nlev,nm,psi_w)
+     call get_variable(trim(fname_strf(ifile)),"phi",(/1,1,1,1/),(/nx_p,ny_p,nlev,nm/),phi)
+     call get_variable(trim(fname_strf(ifile)),"phidz",(/1,1,1,1/),(/nx_p,ny_p,nlev,nm/),phidz)
+     call get_variable(trim(fname_strf(ifile)),"psi_w",(/1,1,1,1/),(/nx_p,ny_p,nlev,nm/),psi_w)
 
-
-     call get_variable(trim(fname_ocn(ifile)),"x_p","x_p",nx_p,x_p)
-     call get_variable(trim(fname_ocn(ifile)),"y_p","y_p",ny_p,y_p)
-     call get_variable(trim(fname_ocn(ifile)),"x_p","lon_p",nx_p,lon_p)
-     call get_variable(trim(fname_ocn(ifile)),"y_p","lat_p",ny_p,lat_p)
-     call get_variable(trim(fname_ocn(ifile)),"x_u","x_u",nx_u,x_u) 
-     call get_variable(trim(fname_ocn(ifile)),"y_v","y_v",ny_v,y_v)
-     call get_variable(trim(fname_grid),"x_p","y_p","mask_p",nx_p,ny_p,mask_ori)
+     call get_dimsize(trim(fname_ocn(ifile)),"x_u",nx_u)
+     call get_dimsize(trim(fname_ocn(ifile)),"y_v",ny_v)
+     call get_variable(trim(fname_ocn(ifile)),"x_p",(/1/),(/nx_p/),x_p)
+     call get_variable(trim(fname_ocn(ifile)),"y_p",(/1/),(/ny_p/),y_p)
+     call get_variable(trim(fname_ocn(ifile)),"lon_p",(/1/),(/nx_p/),lon_p)
+     call get_variable(trim(fname_ocn(ifile)),"lat_p",(/1/),(/ny_p/),lat_p)
+     call get_variable(trim(fname_ocn(ifile)),"x_u",(/1/),(/nx_u/),x_u) 
+     call get_variable(trim(fname_ocn(ifile)),"y_v",(/1/),(/ny_v/),y_v)
+     call get_variable(trim(fname_grid),"mask_p",(/1,1/),(/nx_p,ny_p/),mask_ori)
 
      write(*,*) nx_p,ny_p
      nlon=nx_p-2
@@ -88,8 +90,8 @@ program convert_to_z_4d
      lon(1:nlon)=lon_p(2:nx_p-1) ; lat=lat_p(2:ny_p-1)
      allocate(mask_rho(1:nlon,1:nlat))
      mask_rho(1:nlon,1:nlat)=mask_ori(2:nx_p-1,2:ny_p-1)
-
-     call get_variable(trim(fname_ocn(ifile)),"time","time",ntime,time)
+     call get_dimsize(trim(fname_ocn(ifile)),"time",ntime)
+     call get_variable(trim(fname_ocn(ifile)),"time",(/1/),(/ntime/),time)
      call get_attribute(trim(fname_ocn(ifile)),"time","units",time_unit)
 !     ntime=2
      !===============================================!
@@ -100,11 +102,11 @@ program convert_to_z_4d
           & "degrees_east","degrees_north","m",trim(time_unit),&
           & lon,lat,lev_out,time)
      call writenet_dv(trim(fname_out(ifile)),"lon",1,(/"x"/),(/"m"/),missing_value)
-     call writenet_wv(trim(fname_out(ifile)),"x",1,nlon,x)
+     call writenet_wv(trim(fname_out(ifile)),"x",(/1/),(/nlon/),x)
      call writenet_dv(trim(fname_out(ifile)),"lat",1,(/"y"/),(/"m"/),missing_value)
-     call writenet_wv(trim(fname_out(ifile)),"y",1,nlat,y)
+     call writenet_wv(trim(fname_out(ifile)),"y",(/1/),(/nlat/),y)
      call writenet_dv(trim(fname_out(ifile)),"lon","lat",1,(/"mask_p"/),(/""/),missing_value)
-     call writenet_wv(trim(fname_out(ifile)),"mask_p",1,nlon,1,nlat,mask_rho)
+     call writenet_wv(trim(fname_out(ifile)),"mask_p",(/1,1/),(/nlon,nlat/),mask_rho)
      call writenet_dv(trim(fname_out(ifile)),"lon","lat","lev","time",nvar_out,varnames_out,varunits_out,missing_value)
      write(*,*) "Complete file creation"
      allocate(p(1:nlon,1:nlat,1:nlev_out,1)); allocate(psum(1:nlon,1:nlat,1:nlev_out,1))
@@ -112,14 +114,13 @@ program convert_to_z_4d
      allocate(v(1:nlon,1:nlat,1:nlev_out,1)); allocate(vsum(1:nlon,1:nlat,1:nlev_out,1))
      allocate(rho(1:nlon,1:nlat,1:nlev_out,1)); allocate(rhosum(1:nlon,1:nlat,1:nlev_out,1))
      allocate(w(1:nlon,1:nlat,1:nlev_out,1)); allocate(wsum(1:nlon,1:nlat,1:nlev_out,1))
-!     ntime=1
      do it = 1,ntime
         write(*,*) it
         usum=0.0_idx ; vsum=0.0_idx ; psum=0.0_idx; rhosum=0.0_idx ; wsum=0.0_idx
         do im = im1,im2
-           call get_variable(fname_ocn(ifile),"p",2,nlon+1,2,nlat+1,im,im,it,it,tmp_data_p)
-           call get_variable(fname_ocn(ifile),"u",1,nlon+1,2,nlat+1,im,im,it,it,tmp_data_u)
-           call get_variable(fname_ocn(ifile),"v",2,nlon+1,1,nlat+1,im,im,it,it,tmp_data_v)
+           call get_variable(fname_ocn(ifile),"p",(/2,2,im,it/),(/nlon+1,nlat+1,im,it/),tmp_data_p)
+           call get_variable(fname_ocn(ifile),"u",(/1,2,im,it/),(/nlon+1,nlat+1,im,it/),tmp_data_u)
+           call get_variable(fname_ocn(ifile),"v",(/2,1,im,it/),(/nlon+1,nlat+1,im,it/),tmp_data_v)
            do iz = 1,nlev_out
               if (lev_out(iz) .ge. lev(nlev)) then
                  iz_dw=nlev-1
@@ -169,28 +170,21 @@ program convert_to_z_4d
                        dudx=(tmp_data_u(ix+1,iy,1,1)-tmp_data_u(ix,iy,1,1))/(x_u(ix+1)-x_u(ix))
                        dvdy=(tmp_data_v(ix,iy+1,1,1)-tmp_data_v(ix,iy,1,1))/(y_v(iy+1)-y_v(iy))
                        w(ix,iy,iz,1)=-1.0_idx*(dudx+dvdy)*(wgt_dw*psi_w(ix+1,iy+1,iz_dw,im)+wgt_up*psi_w(ix+1,iy+1,iz_up,im))
-!                       psi_w(ix+1,iy+1,iz,im)
                        wsum(ix,iy,iz,1)=wsum(ix,iy,iz,1)+w(ix,iy,iz,1)
                     else
                        wsum(ix,iy,iz,1)= missing_value
                        w(ix,iy,iz,1)= missing_value
                     end if
-                    ! if (ix .eq. 47 .and. iy .eq. 25 .and. iz .eq. 1) then
-                    !    write(*,*) usum(ix,iy,iz,1),u(ix,iy,iz,1),phi(ix+1,iy+1,iz_dw,im)
-                    !    write(*,*) tmp_data_v(ix,iy+1,1,1)                    
-                    !    write(*,*)
-                    ! end if
-
                  end do
               end do
 
            end do
         end do
-        call writenet_wv(trim(fname_out(ifile)),varnames_out(1),1,nlon,1,nlat,1,nlev_out,it,it,psum)
-        call writenet_wv(trim(fname_out(ifile)),varnames_out(2),1,nlon,1,nlat,1,nlev_out,it,it,usum)
-        call writenet_wv(trim(fname_out(ifile)),varnames_out(3),1,nlon,1,nlat,1,nlev_out,it,it,vsum)
-        call writenet_wv(trim(fname_out(ifile)),varnames_out(4),1,nlon,1,nlat,1,nlev_out,it,it,rhosum)
-        call writenet_wv(trim(fname_out(ifile)),varnames_out(5),1,nlon,1,nlat,1,nlev_out,it,it,wsum)
+        call writenet_wv(trim(fname_out(ifile)),varnames_out(1),(/1,1,1,it/),(/nlon,nlat,nlev_out,it/),psum)
+        call writenet_wv(trim(fname_out(ifile)),varnames_out(2),(/1,1,1,it/),(/nlon,nlat,nlev_out,it/),usum)
+        call writenet_wv(trim(fname_out(ifile)),varnames_out(3),(/1,1,1,it/),(/nlon,nlat,nlev_out,it/),vsum)
+        call writenet_wv(trim(fname_out(ifile)),varnames_out(4),(/1,1,1,it/),(/nlon,nlat,nlev_out,it/),rhosum)
+        call writenet_wv(trim(fname_out(ifile)),varnames_out(5),(/1,1,1,it/),(/nlon,nlat,nlev_out,it/),wsum)
      end do
      deallocate(p); deallocate(psum); deallocate(tmp_data_p)
      deallocate(u); deallocate(usum); deallocate(tmp_data_u)

@@ -1,11 +1,11 @@
 ## Makefile of T/S files
 #==========================
 #Set compiler
-FC  = ifort
-NETCDF_INCDIR=/opt/local/build/netcdf4/netcdf-c-4.3.3.1_ifort_gcc/include
-NETCDF_LIBDIR=/opt/local/build/netcdf4/netcdf-c-4.3.3.1_ifort_gcc/lib
-FFLAGS += -I$(NETCDF_INCDIR) 
-LDFLAGS += -L$(NETCDF_LIBDIR) -lnetcdf -lnetcdff
+FC  = gfortran
+NETCDF_INCDIR=-I/opt/homebrew/Cellar/netcdf-fortran/4.6.1/include -I/opt/homebrew/Cellar/netcdf-fortran/4.6.1/include
+NETCDF_LIBDIR=-L/opt/homebrew/Cellar/netcdf-fortran/4.6.1/lib -L/opt/homebrew/Cellar/netcdf/4.9.2_2/lib
+FFLAGS += $(NETCDF_INCDIR)
+LDFLAGS += $(NETCDF_LIBDIR) -lnetcdf -lnetcdff
 
 TARGET_CONV=exec_convert_to_z_4d.out
 OBJ_NCDF  = ncdf_write.o \
