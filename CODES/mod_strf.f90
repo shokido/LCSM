@@ -3,11 +3,11 @@ module mod_strf
   use input_files
   use mod_io_master
   implicit none
-  ! BN file name
-  integer :: ind1_bn,ind2_bn
-  real(idx) :: wgt1_bn,wgt2_bn
-  real(idx),allocatable :: time_bn(:)
-  real(idx),allocatable :: bn_in(:,:,:,:)
+  ! obn file name
+  integer :: ind1_obn,ind2_obn
+  real(idx) :: wgt1_obn,wgt2_obn
+  real(idx),allocatable :: time_obn(:)
+  real(idx),allocatable :: obn_in(:,:,:,:)
 contains
   subroutine read_vm_data_nd(nx,ny,nm,fname,varname,data,time,start_yymmdd,start_hhmmss)
     implicit none
