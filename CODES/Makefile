@@ -18,13 +18,11 @@ ncdf_read.o
 OBJ = run_param.o \
 run_types.o 
 OBJ_io  = calendar_sub.o \
-input_files.o \
 mod_io_master.o \
 mod_hist.o \
 mod_grid.o \
 mod_avg.o \
-mod_rst.o \
-mod_strf.o 
+mod_rst.o
 OBJ_ocn  = lcsm_array.o \
  ocn_dyn.o
 OBJ_main  = lcsm_main_vs.o
@@ -32,12 +30,11 @@ OBJ_main  = lcsm_main_vs.o
 MODS  = ncdf_read.mod \
 		ncdf_write.mod \
         calendar_sub.mod \
-        input_files.mod \
         mod_hist.mod \
         mod_grid.mod \
         mod_avg.mod \
         mod_rst.mod \
-        mod_strf.mod \
+		mod_io_master.mod \
         run_types.mod \
 	lcsm_array.mod \
 	ocn_dyn.mod  \
@@ -59,19 +56,15 @@ run_param.o:run_param.f90
 	$(FC) -c $< ${LDFLAGS} ${FFLAGS}
 run_types.o:run_types.f90 run_param.f90
 	$(FC) -c $< ${LDFLAGS} ${FFLAGS}
-input_files.o:input_files.f90 calendar_sub.f90
-	$(FC) -c $< ${LDFLAGS} ${FFLAGS}
 mod_io_master.o:mod_io_master.f90 run_types.f90
 	$(FC) -c $< ${LDFLAGS} ${FFLAGS}
-mod_grid.o:mod_grid.f90 input_files.f90
+mod_grid.o:mod_grid.f90 ncdf_read.f90
 	$(FC) -c $< ${LDFLAGS} ${FFLAGS}
 mod_hist.o:mod_hist.f90
 	$(FC) -c $< ${LDFLAGS} ${FFLAGS}
 mod_avg.o:mod_avg.f90
 	$(FC) -c $< ${LDFLAGS} ${FFLAGS}
 mod_rst.o:mod_rst.f90
-	$(FC) -c $< ${LDFLAGS} ${FFLAGS}
-mod_strf.o:mod_strf.f90 input_files.f90
 	$(FC) -c $< ${LDFLAGS} ${FFLAGS}
 lcsm_array.o:lcsm_array.f90
 	$(FC) -c $< ${LDFLAGS} ${FFLAGS}
