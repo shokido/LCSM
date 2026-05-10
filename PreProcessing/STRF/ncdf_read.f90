@@ -8,50 +8,64 @@ module ncdf_read
   !================================================================
   ! subroutine get_dimension(ncid, name, dim, dims)
   interface get_dimension
-     module procedure get_dimension,dget_dimension
+     module procedure get_dimension_i,get_dimension_f,get_dimension_d
   end interface get_dimension
-  !---------------------------------------------------------------
-  ! subroutine get_dimension_units(ncid, name, dim, dims,units)
-  interface get_dimension_units
-     module procedure get_dimension_units,dget_dimension_units
-  end interface get_dimension_units
-  !---------------------------------------------------------------
-  interface get_variable
-     module procedure get_variable_1D,dget_variable_1D,get_variable_1D_nc,dget_variable_1D_nc, &
-          & get_variable_2D,dget_variable_2D,get_variable_2D_nc,dget_variable_2D_nc, &
-          & get_variable_3D,dget_variable_3D,get_variable_3D_nc,dget_variable_3D_nc,&
-          & get_variable_4D,dget_variable_4D,get_variable_4D_nc,dget_variable_4D_nc,&
-          & get_variable_1D_wr,dget_variable_1D_wr,&
-          & get_variable_2D_wr,dget_variable_2D_wr,&
-          & get_variable_3D_wr,dget_variable_3D_wr,&
-          & get_variable_4D_wr,dget_variable_4D_wr,&
-          & get_variable_5D_wr,dget_variable_5D_wr
-  end interface get_variable
-  ! subroutine select_array_1D(ori_N,ori_data,data_min,data_max,new_N,new_data,min_i,max_i)
   interface select_array_1D
-     module procedure select_array_1D,dselect_array_1D,iselect_array_1D
+     module procedure select_array_1D_i,select_array_1D_f,select_array_1D_d
   end interface select_array_1D
   interface get_attribute
      module procedure get_attribute_c,get_attribute_f,get_attribute_d
   end interface get_attribute
-
-  public :: check_r,get_ndim,get_dimension
-  public :: get_variable
+  interface get_variable
+     module procedure    get_variable_1D_wr_i,get_variable_1D_wr_f,get_variable_1D_wr_d,&
+          & get_variable_2D_wr_i,get_variable_2D_wr_f,get_variable_2D_wr_d,&
+          & get_variable_3D_wr_i,get_variable_3D_wr_f,get_variable_3D_wr_d,&
+          & get_variable_4D_wr_i,get_variable_4D_wr_f,get_variable_4D_wr_d,&
+          & get_variable_5D_wr_i,get_variable_5D_wr_f,get_variable_5D_wr_d
+  end interface get_variable
+  interface get_variable_TLL
+     module procedure get_variable_TLL_f,get_variable_TLL_d
+  end interface get_variable_TLL
+  interface get_variable_TLLL
+     module procedure get_variable_TLLL_f,get_variable_TLLL_d
+  end interface get_variable_TLLL
+  public :: check_r,get_dimsize,get_dimension,select_array_1D
   public :: get_attribute
-  public :: select_array_1D
+  public :: get_variable
+  public :: get_variable_TLL, get_variable_TLLL
 contains
-  ! Check_R subroutine--------------------------------------------------------------
+  !==============================!  
+  ! Check_R subroutine           !
+  !==============================!  
   subroutine check_r(status)
     use netcdf
     implicit none
     integer, intent ( in) :: status
-    if(status /= nf90_noerr) then 
+   if(status /= nf90_noerr) then 
        print *, trim(nf90_strerror(status))
        stop "Stopped"
     end if
   end subroutine check_r
-  ! getting dimension
-  !===========================================================================================
+  !=============================================!  
+  ! Subroutine for get dimension size           !
+  ! get_dimsize(ncid,name,ndim)                 !
+  !=============================================!  
+  subroutine get_dimsize(fname,name, ndim)
+    use netcdf
+    implicit none    
+    character(len=*),  intent(in) :: fname
+    character(len=*),  intent(in) :: name
+    integer,           intent(inout) :: ndim
+    integer :: ncid,dimid
+    call check_r(nf90_open(trim(fname),nf90_nowrite,ncid))    
+    call check_r(nf90_inq_dimid(ncid, name, dimid) )
+    call check_r(nf90_inquire_dimension(ncid, dimid, len=ndim) )
+    call check_r(nf90_close(ncid))    
+  end subroutine get_dimsize
+  !=============================================!  
+  ! Subroutine for get dimension size           !
+  ! get_dimsize(ncid,name,ndim)                 !
+  !=============================================!  
   subroutine get_ndim(ncid, name, ndim)
     use netcdf
     implicit none
@@ -62,83 +76,151 @@ contains
     call check_r(nf90_inq_dimid(ncid, name, dimid) )
     call check_r(nf90_inquire_dimension(ncid, dimid, len=ndim) )
   end subroutine get_ndim
-  subroutine get_dimension(ncid, name, dim, dims)
+  !=============================================!  
+  ! Subroutine for get dimension variable       !
+  ! get_ndim(ncid,name,ndim,dims)            !
+  !=============================================!  
+  subroutine get_dimension_i(ncid, name, ndim, dims)
     use netcdf
     implicit none
-    integer,parameter :: idx=4    
     integer,           intent(in) :: ncid
     character(len=*),  intent(in) :: name
-    integer,           intent(inout) :: dim
+    integer,           intent(inout) :: ndim
+    integer, allocatable, intent(inout) :: dims(:)
+    integer :: err
+    integer :: varid, dimid
+    call check_r(nf90_inq_dimid(ncid, name, dimid) )
+    call check_r(nf90_inquire_dimension(ncid, dimid, len=ndim) )
+    allocate(dims(ndim), stat=err)
+    if (err /= 0) print *, name, ": Allocation request denied in get_dimension_i"
+    call check_r( nf90_inq_varid(ncid, name, varid) )
+    call check_r( nf90_get_var(ncid, varid, dims) )
+  end subroutine get_dimension_i
+   subroutine get_dimension_f(ncid, name, ndim, dims)
+    use netcdf
+    implicit none
+    integer,parameter :: idx=4
+    integer,           intent(in) :: ncid
+    character(len=*),  intent(in) :: name
+    integer,           intent(inout) :: ndim
     real(idx), allocatable, intent(inout) :: dims(:)
     integer :: err
     integer :: varid, dimid
     call check_r(nf90_inq_dimid(ncid, name, dimid) )
-    call check_r(nf90_inquire_dimension(ncid, dimid, len=dim) )
-    allocate(dims(dim), stat=err)
-    if (err /= 0) print *, name, ": Allocation request denied"
-    call check_r( nf90_inq_varid(ncid, name, varid) )
-    call check_r( nf90_get_var(ncid, varid, dims) )
-  end subroutine get_dimension
-  !----------------------------------------------------
-  subroutine dget_dimension(ncid, name, dim, dims)
+    call check_r(nf90_inquire_dimension(ncid, dimid, len=ndim) )
+    allocate(dims(ndim), stat=err)
+    if (err /= 0) print *, name, ": Allocation request denied in get_dimension_f"
+    call check_r( nf90_inq_varid(ncid, name, varid))
+    call check_r( nf90_get_var(ncid, varid, dims))
+  end subroutine get_dimension_f
+   subroutine get_dimension_d(ncid, name, ndim, dims)
     use netcdf
     implicit none
     integer,parameter :: idx=8
     integer,           intent(in) :: ncid
     character(len=*),  intent(in) :: name
-    integer,           intent(inout) :: dim
+    integer,           intent(inout) :: ndim
     real(idx), allocatable, intent(inout) :: dims(:)
     integer :: err
     integer :: varid, dimid
     call check_r(nf90_inq_dimid(ncid, name, dimid) )
-    call check_r(nf90_inquire_dimension(ncid, dimid, len=dim) )
-    allocate(dims(dim), stat=err)
-    if (err /= 0) print *, name, ": Allocation request denied"
-    call check_r( nf90_inq_varid(ncid, name, varid) )
-    call check_r( nf90_get_var(ncid, varid, dims) )
-  end subroutine dget_dimension
-  !---------------------------------------------------------
-  subroutine get_dimension_units(ncid, name, dim, dims,units)
+    call check_r(nf90_inquire_dimension(ncid, dimid, len=ndim) )
+    allocate(dims(ndim), stat=err)
+    if (err /= 0) print *, name, ": Allocation request denied in get_dimension_d"
+    call check_r( nf90_inq_varid(ncid, name, varid))
+    call check_r( nf90_get_var(ncid, varid, dims))
+  end subroutine get_dimension_d
+  !=============================================!  
+  ! Subroutine for get attribute                !
+  ! get_attribute(fname,varname,varatt,atts)    !
+  !=============================================!  
+  subroutine get_attribute_c(fname,varname,varatt,atts)
     use netcdf
     implicit none
-    integer,parameter :: idx=4    
-    integer,           intent(in) :: ncid
-    character(len=*),  intent(in) :: name
-    integer,           intent(inout) :: dim
-    real(idx), allocatable, intent(inout) :: dims(:)
-    character(len=*), intent(out) :: units 
+    integer,parameter :: maxlen=400
+    character(len=*),  intent(in) :: fname,varname,varatt
+    character(len=*),  intent(inout) :: atts
+    integer :: ncid
     integer :: err
-    integer :: varid, dimid
-    call check_r(nf90_inq_dimid(ncid, name, dimid))
-    call check_r(nf90_inquire_dimension(ncid, dimid, len=dim) )
-    allocate(dims(dim), stat=err)
-    if (err /= 0) print *, name, ": Allocation request denied"
-    call check_r( nf90_inq_varid(ncid, name, varid) )
-    call check_r( nf90_get_var(ncid, varid, dims) )
-    call check_r( nf90_get_att(ncid, varid, 'units', units) )
-  end subroutine get_dimension_units
-  !---------------------------------------------------------
-  subroutine dget_dimension_units(ncid, name, dim, dims,units)
+    integer :: varid,dim1id
+    integer :: start(1), count(1)
+    ! Open files
+    call check_r( nf90_open(trim(fname),nf90_nowrite,ncid))
+    call check_r( nf90_inq_varid(ncid, varname, varid) )
+    if ( nf90_get_att(ncid, varid,varatt,atts) == 0 ) then
+       call check_r(nf90_get_att(ncid, varid,varatt,atts))
+    else
+       atts="None"
+    end if
+    ! ! close file
+    call check_r(nf90_close(ncid))
+  end subroutine get_attribute_c
+  subroutine get_attribute_f(fname,varname,varatt,atts)
     use netcdf
     implicit none
-    integer,parameter :: idx=8  
-    integer,           intent(in) :: ncid
-    character(len=*),  intent(in) :: name
-    integer,           intent(inout) :: dim
-    real(idx), allocatable, intent(inout) :: dims(:)
-    character(len=*), intent(out) :: units 
+    integer,parameter :: idx=4,maxlen=400
+    character(len=*),  intent(in) :: fname,varname,varatt
+    real(idx),  intent(inout) :: atts
+    integer :: ncid
     integer :: err
-    integer :: varid, dimid
-    call check_r(nf90_inq_dimid(ncid, name, dimid))
-    call check_r(nf90_inquire_dimension(ncid, dimid, len=dim) )
-    allocate(dims(dim), stat=err)
-    if (err /= 0) print *, name, ": Allocation request denied"
-    call check_r( nf90_inq_varid(ncid, name, varid) )
-    call check_r( nf90_get_var(ncid, varid, dims) )
-    call check_r( nf90_get_att(ncid, varid, 'units', units) )
-  end subroutine dget_dimension_units
+    integer :: varid,dim1id
+    integer :: start(1), count(1)
+    ! Open files
+    call check_r( nf90_open(trim(fname),nf90_nowrite,ncid))
+    call check_r( nf90_inq_varid(ncid, varname, varid) )
+    if ( nf90_get_att(ncid, varid,varatt,atts) == 0 ) then
+       call check_r(nf90_get_att(ncid, varid,varatt,atts))
+    else
+       atts=0.0_idx
+    end if
+    ! ! close file
+    call check_r(nf90_close(ncid))
+  end subroutine get_attribute_f
+  subroutine get_attribute_i(fname,varname,varatt,atts)
+    use netcdf
+    implicit none
+    integer,parameter :: idx=4,maxlen=400
+    character(len=*),  intent(in) :: fname,varname,varatt
+    integer,  intent(inout) :: atts
+    integer :: ncid
+    integer :: err
+    integer :: varid,dim1id
+    integer :: start(1), count(1)
+    ! Open files
+    call check_r( nf90_open(trim(fname),nf90_nowrite,ncid))
+    call check_r( nf90_inq_varid(ncid, varname, varid) )
+    if ( nf90_get_att(ncid, varid,varatt,atts) == 0 ) then
+       call check_r(nf90_get_att(ncid, varid,varatt,atts))
+    else
+       atts=0.0_idx
+    end if
+    ! ! close file
+    call check_r(nf90_close(ncid))
+  end subroutine get_attribute_i
+  subroutine get_attribute_d(fname,varname,varatt,atts)
+    use netcdf
+    implicit none
+    integer,parameter :: idx=8,maxlen=400
+    character(len=*),  intent(in) :: fname,varname,varatt
+    real(idx),  intent(inout) :: atts
+    integer :: ncid
+    integer :: err
+    integer :: varid,dim1id
+    integer :: start(1), count(1)
+    ! Open files
+    call check_r( nf90_open(trim(fname),nf90_nowrite,ncid))
+    call check_r( nf90_inq_varid(ncid, varname, varid) )
+    if ( nf90_get_att(ncid, varid,varatt,atts) == 0 ) then
+       call check_r(nf90_get_att(ncid, varid,varatt,atts))
+    else
+       atts=0.0_idx
+    end if
+    ! ! close file
+    call check_r(nf90_close(ncid))
+  end subroutine get_attribute_d
+
   !------------------------------------------------------------------------
-  subroutine iselect_array_1D(ori_N,ori_data,data_min,data_max,new_N,new_data,min_i,max_i)
+  subroutine select_array_1D_i(ori_N,ori_data,data_min,data_max,new_N,new_data,min_i,max_i)
     implicit none
     integer,intent(in) :: ori_N
     integer,intent(in) :: ori_data(ori_N)
@@ -179,9 +261,9 @@ contains
        min_i=minval(indices); max_i=maxval(indices)
        deallocate(indices)
     end if
-  end subroutine iselect_array_1D
+  end subroutine select_array_1D_i
 
-  subroutine select_array_1D(ori_N,ori_data,data_min,data_max,new_N,new_data,min_i,max_i)
+  subroutine select_array_1D_f(ori_N,ori_data,data_min,data_max,new_N,new_data,min_i,max_i)
     implicit none
     integer,parameter :: idx=4
     integer,intent(in) :: ori_N
@@ -224,9 +306,8 @@ contains
        min_i=minval(indices); max_i=maxval(indices)
        deallocate(indices)
     end if
-  end subroutine select_array_1D
-
-  subroutine dselect_array_1D(ori_N,ori_data,data_min,data_max,new_N,new_data,min_i,max_i)
+  end subroutine select_array_1D_f
+  subroutine select_array_1D_d(ori_N,ori_data,data_min,data_max,new_N,new_data,min_i,max_i)
     implicit none
     integer,parameter :: idx=8
     integer,intent(in) :: ori_N
@@ -269,240 +350,73 @@ contains
        min_i=minval(indices); max_i=maxval(indices)
        deallocate(indices)
     end if
-  end subroutine dselect_array_1D
-  !---------------------------------------------
-  ! Subroutine for get variables
-  !---------------------------------------------
-  subroutine get_variable_1D(fname,dim1name,varname,dim1unit,varunit,&
-       & ndim1,dim1,vars)
+  end subroutine select_array_1D_d
+  !=============================================!  
+  ! Subroutine for get array                    !
+  ! get_attribute(fname,varname,varatt,atts)    !
+  !=============================================!  
+  ! 1-D                                         !
+  !=============================================!  
+  subroutine get_variable_1D_wr_i(fname,varname,istr,iend,vars)
     use netcdf
     implicit none
-    integer,parameter :: idx=4,maxlen=400
-    character(len=*),  intent(in) :: fname
-    character(len=*),  intent(in) :: dim1name,varname
-    character(len=*),  intent(inout) :: dim1unit,varunit
-    integer,intent(inout) :: ndim1
-    real(idx), allocatable, intent(inout) :: dim1(:),vars(:)
-    integer :: ncid
-    integer :: err
-    real(idx) :: scale_factor,add_offset
-    integer :: varid,dim1id
-    integer :: start(1), count(1)
+    integer,parameter :: maxlen=400,ndim=1
+    character(len=*),  intent(in) :: fname,varname
+    integer,intent(in) :: istr(ndim),iend(ndim)
+    integer, allocatable, intent(inout) :: vars(:)
+    integer :: ncid,varid,err,i
+    integer :: scale_factor,add_offset
+    integer :: count_array(ndim)
     ! Open files
-    call check_r( nf90_open(trim(fname),nf90_nowrite,ncid))
-    if (allocated(dim1) .eqv. .true.) then
-       deallocate(dim1)
-    end if
+    call check_r(nf90_open(trim(fname),nf90_nowrite,ncid))    
     if (allocated(vars) .eqv. .true.) then
        deallocate(vars)
     end if
-    ! Obtain dim1
-    call get_dimension(ncid,dim1name,ndim1,dim1)
-    ! Allocate data
-    allocate(vars(ndim1), stat=err)
-    start = (/1/)
-    count = (/ndim1/)
-    call check_r( nf90_inq_varid(ncid, varname, varid) )
-    call check_r( nf90_get_var(ncid, varid, vars, start = start, &
-         count = count) )
+    do i=1,ndim
+       count_array(i)=iend(i)-istr(i)+1
+    end do
 
-    ! Get attributes
-    call check_r( nf90_inq_dimid(ncid, dim1name, dim1id) )
-    if ( nf90_get_att(ncid, dim1id, 'units',dim1unit) == 0 ) then
-       call check_r( nf90_get_att(ncid,dim1id, 'units',dim1unit))
-    else
-       dim1unit="None"
-    end if
-    if ( nf90_get_att(ncid, varid, 'units',varunit) == 0 ) then
-       call check_r( nf90_get_att(ncid,varid, 'units',varunit))
-    else
-       varunit="None"
-    end if
-    if ( nf90_get_att(ncid, varid, 'scale_factor',scale_factor) == 0 ) then
+    ! Allocate data
+    allocate(vars(count_array(1)), stat=err)
+    call check_r( nf90_inq_varid(ncid, varname, varid) )
+    call check_r( nf90_get_var(ncid, varid, vars, start = istr, count = count_array))
+    if (nf90_get_att(ncid, varid, 'scale_factor',scale_factor) == 0 ) then
        call check_r( nf90_get_att(ncid, varid, 'scale_factor',scale_factor))
     else
        scale_factor=1.0
     end if
-    if ( nf90_get_att(ncid, varid, 'add_offset',add_offset) == 0 ) then
+    if (nf90_get_att(ncid, varid, 'add_offset',add_offset) == 0 ) then
        call check_r( nf90_get_att(ncid, varid, 'add_offset',add_offset))
     else
        add_offset = 0.0
     end if
     vars = vars * scale_factor + add_offset
-    ! ! close file
+    ! close file
     call check_r(nf90_close(ncid))
-  end subroutine get_variable_1D
-  subroutine dget_variable_1D(fname,dim1name,varname,dim1unit,varunit,&
-       & ndim1,dim1,vars)
-    use netcdf
-    implicit none
-    integer,parameter :: idx=8,maxlen=400
-    character(len=*),  intent(in) :: fname
-    character(len=*),  intent(in) :: dim1name,varname
-    character(len=*),  intent(inout) :: dim1unit,varunit
-    integer,intent(inout) :: ndim1
-    real(idx), allocatable, intent(inout) :: dim1(:),vars(:)
-    integer :: ncid
-    integer :: err
-    real(idx) :: scale_factor,add_offset
-    integer :: varid,dim1id
-    integer :: start(1), count(1)
-    ! Open files
-    call check_r( nf90_open(trim(fname),nf90_nowrite,ncid))
-    if (allocated(dim1) .eqv. .true.) then
-       deallocate(dim1)
-    end if
-    if (allocated(vars) .eqv. .true.) then
-       deallocate(vars)
-    end if
-    ! Obtain dim1
-    call get_dimension(ncid,dim1name,ndim1,dim1)
-    ! Allocate data
-    allocate(vars(ndim1), stat=err)
-    start = (/1/)
-    count = (/ndim1/)
-    call check_r( nf90_inq_varid(ncid, varname, varid) )
-    call check_r( nf90_get_var(ncid, varid, vars, start = start, &
-         count = count) )
-
-    ! Get attributes
-    call check_r( nf90_inq_dimid(ncid, dim1name, dim1id) )
-    if ( nf90_get_att(ncid, dim1id, 'units',dim1unit) == 0 ) then
-       call check_r( nf90_get_att(ncid,dim1id, 'units',dim1unit))
-    else
-       dim1unit="None"
-    end if
-    if ( nf90_get_att(ncid, varid, 'units',varunit) == 0 ) then
-       call check_r( nf90_get_att(ncid,varid, 'units',varunit))
-    else
-       varunit="None"
-    end if
-    if ( nf90_get_att(ncid, varid, 'scale_factor',scale_factor) == 0 ) then
-       call check_r( nf90_get_att(ncid, varid, 'scale_factor',scale_factor))
-    else
-       scale_factor=1.0
-    end if
-    if ( nf90_get_att(ncid, varid, 'add_offset',add_offset) == 0 ) then
-       call check_r( nf90_get_att(ncid, varid, 'add_offset',add_offset))
-    else
-       add_offset = 0.0
-    end if
-    vars = vars * scale_factor + add_offset
-    ! ! close file
-    call check_r(nf90_close(ncid))
-  end subroutine dget_variable_1D
-  ! Variable only
-  subroutine get_variable_1D_nc(fname,dim1name,varname,ndim1,vars)
-    use netcdf
-    implicit none
-    integer,parameter :: idx=4,maxlen=400
-    character(len=*),  intent(in) :: fname
-    character(len=*),  intent(in) :: dim1name,varname
-    integer,intent(inout) :: ndim1
-    real(idx), allocatable, intent(inout) :: vars(:)
-    integer :: ncid
-    integer :: err
-    real(idx) :: scale_factor,add_offset
-    integer :: varid,dim1id
-    integer :: start(1), count(1)
-    ! Open files
-    call check_r( nf90_open(trim(fname),nf90_nowrite,ncid))
-    if (allocated(vars) .eqv. .true.) then
-       deallocate(vars)
-    end if
-    ! Obtain ndim
-    call get_ndim(ncid,dim1name,ndim1)
-    ! Allocate data
-    allocate(vars(ndim1), stat=err)
-    start = (/1/)
-    count = (/ndim1/)
-    call check_r( nf90_inq_varid(ncid, varname, varid) )
-    call check_r( nf90_get_var(ncid, varid, vars, start = start, &
-         count = count) )
-
-    if ( nf90_get_att(ncid, varid, 'scale_factor',scale_factor) == 0 ) then
-       call check_r( nf90_get_att(ncid, varid, 'scale_factor',scale_factor))
-    else
-       scale_factor=1.0
-    end if
-    if ( nf90_get_att(ncid, varid, 'add_offset',add_offset) == 0 ) then
-       call check_r( nf90_get_att(ncid, varid, 'add_offset',add_offset))
-    else
-       add_offset = 0.0
-    end if
-    vars = vars * scale_factor + add_offset
-    ! ! close file
-    call check_r(nf90_close(ncid))
-  end subroutine get_variable_1D_nc
-  subroutine dget_variable_1D_nc(fname,dim1name,varname,ndim1,vars)
-    use netcdf
-    implicit none
-    integer,parameter :: idx=8,maxlen=400
-    character(len=*),  intent(in) :: fname
-    character(len=*),  intent(in) :: dim1name,varname
-    integer,intent(inout) :: ndim1
-    real(idx), allocatable, intent(inout) :: vars(:)
-    integer :: ncid
-    integer :: err
-    real(idx) :: scale_factor,add_offset
-    integer :: varid,dim1id
-    integer :: start(1), count(1)
-    ! Open files
-    call check_r( nf90_open(trim(fname),nf90_nowrite,ncid))
-    if (allocated(vars) .eqv. .true.) then
-       deallocate(vars)
-    end if
-    ! Obtain ndim
-    call get_ndim(ncid,dim1name,ndim1)
-    ! Allocate data
-    allocate(vars(ndim1), stat=err)
-    start = (/1/)
-    count = (/ndim1/)
-    call check_r( nf90_inq_varid(ncid, varname, varid) )
-    call check_r( nf90_get_var(ncid, varid, vars, start = start, &
-         count = count) )
-
-    if ( nf90_get_att(ncid, varid, 'scale_factor',scale_factor) == 0 ) then
-       call check_r( nf90_get_att(ncid, varid, 'scale_factor',scale_factor))
-    else
-       scale_factor=1.0
-    end if
-    if ( nf90_get_att(ncid, varid, 'add_offset',add_offset) == 0 ) then
-       call check_r( nf90_get_att(ncid, varid, 'add_offset',add_offset))
-    else
-       add_offset = 0.0
-    end if
-    vars = vars * scale_factor + add_offset
-    ! ! close file
-    call check_r(nf90_close(ncid))
-  end subroutine dget_variable_1D_nc
-  subroutine get_variable_1D_wr(fname,varname,istr_1,iend_1,vars)
+  end subroutine get_variable_1D_wr_i
+  subroutine get_variable_1D_wr_f(fname,varname,istr,iend,vars)
     use netcdf
     implicit none
     integer,parameter :: idx=4,maxlen=400,ndim=1
     character(len=*),  intent(in) :: fname,varname
-    integer,intent(in) :: istr_1,iend_1
+    integer,intent(in) :: istr(ndim),iend(ndim)
     real(idx), allocatable, intent(inout) :: vars(:)
-    integer :: ndim1
-    integer :: ncid,varid
-    integer :: err
+    integer :: ncid,varid,err,i
     real(idx) :: scale_factor,add_offset
-    integer :: start(ndim), count(ndim)
+    integer :: count_array(ndim)
     ! Open files
-    call check_r(nf90_open(trim(fname),nf90_nowrite,ncid))
-    
+    call check_r(nf90_open(trim(fname),nf90_nowrite,ncid))    
     if (allocated(vars) .eqv. .true.) then
        deallocate(vars)
     end if
-    ndim1 = iend_1-istr_1+1
+    do i=1,ndim
+       count_array(i)=iend(i)-istr(i)+1
+    end do
 
     ! Allocate data
-    allocate(vars(ndim1), stat=err)
-    start = (/istr_1/)
-    count = (/ndim1/)
+    allocate(vars(count_array(1)), stat=err)
     call check_r( nf90_inq_varid(ncid, varname, varid) )
-    call check_r( nf90_get_var(ncid, varid, vars, start = start, &
-         count = count) )
+    call check_r( nf90_get_var(ncid, varid, vars, start = istr, count = count_array))
     if (nf90_get_att(ncid, varid, 'scale_factor',scale_factor) == 0 ) then
        call check_r( nf90_get_att(ncid, varid, 'scale_factor',scale_factor))
     else
@@ -514,36 +428,32 @@ contains
        add_offset = 0.0
     end if
     vars = vars * scale_factor + add_offset
-    ! ! close file
+    ! close file
     call check_r(nf90_close(ncid))
-  end subroutine get_variable_1D_wr
-  subroutine dget_variable_1D_wr(fname,varname,istr_1,iend_1,vars)
+  end subroutine get_variable_1D_wr_f
+  subroutine get_variable_1D_wr_d(fname,varname,istr,iend,vars)
     use netcdf
     implicit none
     integer,parameter :: idx=8,maxlen=400,ndim=1
     character(len=*),  intent(in) :: fname,varname
-    integer,intent(in) :: istr_1,iend_1
+    integer,intent(in) :: istr(ndim),iend(ndim)
     real(idx), allocatable, intent(inout) :: vars(:)
-    integer :: ndim1
-    integer :: ncid,varid
-    integer :: err
+    integer :: ncid,varid,err,i
     real(idx) :: scale_factor,add_offset
-    integer :: start(ndim), count(ndim)
+    integer :: count_array(ndim)
     ! Open files
-    call check_r(nf90_open(trim(fname),nf90_nowrite,ncid))
-    
+    call check_r(nf90_open(trim(fname),nf90_nowrite,ncid))    
     if (allocated(vars) .eqv. .true.) then
        deallocate(vars)
     end if
-    ndim1 = iend_1-istr_1+1
+    do i=1,ndim
+       count_array(i)=iend(i)-istr(i)+1
+    end do
 
     ! Allocate data
-    allocate(vars(ndim1), stat=err)
-    start = (/istr_1/)
-    count = (/ndim1/)
+    allocate(vars(count_array(1)), stat=err)
     call check_r( nf90_inq_varid(ncid, varname, varid) )
-    call check_r( nf90_get_var(ncid, varid, vars, start = start, &
-         count = count) )
+    call check_r( nf90_get_var(ncid, varid, vars, start = istr, count = count_array))
     if (nf90_get_att(ncid, varid, 'scale_factor',scale_factor) == 0 ) then
        call check_r( nf90_get_att(ncid, varid, 'scale_factor',scale_factor))
     else
@@ -555,275 +465,73 @@ contains
        add_offset = 0.0
     end if
     vars = vars * scale_factor + add_offset
-    ! ! close file
+    ! close file
     call check_r(nf90_close(ncid))
-  end subroutine dget_variable_1D_wr
+  end subroutine get_variable_1D_wr_d
 
-  ! 2D
-  subroutine get_variable_2D(fname,dim1name,dim2name,varname,dim1unit,dim2unit,varunit,&
-       & ndim1,ndim2,dim1,dim2,vars)
+  !=============================================!  
+  ! 2-D                                         !
+  !=============================================!  
+  subroutine get_variable_2d_wr_i(fname,varname,istr,iend,vars)
     use netcdf
     implicit none
-    integer,parameter :: idx=4,maxlen=400
-    character(len=*),  intent(in) :: fname
-    character(len=*),  intent(in) :: dim1name,dim2name,varname
-    character(len=*),  intent(inout) :: dim1unit,dim2unit,varunit
-    integer,intent(inout) :: ndim1,ndim2
-    real(idx), allocatable, intent(inout) :: dim1(:),dim2(:),vars(:,:)
-    integer,allocatable :: temp_cals(:),cals(:)
-    integer :: ncid
-    integer :: err
-    real(idx) :: scale_factor,add_offset
-    integer :: varid,dim1id,dim2id
-    integer :: start(2), count(2)
+    integer,parameter :: maxlen=400,ndim=2
+    character(len=*),  intent(in) :: fname,varname
+    integer,intent(in) :: istr(ndim),iend(ndim)
+    integer, allocatable, intent(inout) :: vars(:,:)
+    integer :: ncid,varid,err,i
+    integer :: scale_factor,add_offset
+    integer :: count_array(ndim)
     ! Open files
-    call check_r( nf90_open(trim(fname),nf90_nowrite,ncid))
-    if (allocated(dim1) .eqv. .true.) then
-       deallocate(dim1)
-    end if
-    if (allocated(dim2) .eqv. .true.) then
-       deallocate(dim2)
-    end if
+    call check_r(nf90_open(trim(fname),nf90_nowrite,ncid))    
     if (allocated(vars) .eqv. .true.) then
        deallocate(vars)
     end if
-    ! Obtain dim1
-    call get_dimension(ncid,dim1name,ndim1,dim1)
-    ! Obtain dim2
-    call get_dimension(ncid,dim2name,ndim2,dim2)
-    ! Allocate data
-    allocate(vars(ndim1,ndim2), stat=err)
-    start = (/1,1/)
-    count = (/ndim1,ndim2/)
-    call check_r( nf90_inq_varid(ncid, varname, varid) )
-    call check_r( nf90_get_var(ncid, varid, vars, start = start, &
-         count = count) )
+    do i=1,ndim
+       count_array(i)=iend(i)-istr(i)+1
+    end do
 
-    ! Get attributes
-    call check_r( nf90_inq_dimid(ncid, dim1name, dim1id) )
-    if ( nf90_get_att(ncid, dim1id, 'units',dim1unit) == 0 ) then
-       call check_r( nf90_get_att(ncid,dim1id, 'units',dim1unit))
-    else
-       dim1unit="None"
-    end if
-    call check_r( nf90_inq_dimid(ncid, dim2name, dim2id) )
-    if ( nf90_get_att(ncid, dim2id, 'units',dim2unit) == 0 ) then
-       call check_r( nf90_get_att(ncid,dim2id, 'units',dim2unit))
-    else
-       dim2unit="None"
-    end if
-    if ( nf90_get_att(ncid, varid, 'units',varunit) == 0 ) then
-       call check_r( nf90_get_att(ncid,varid, 'units',varunit))
-    else
-       varunit="None"
-    end if
-    if ( nf90_get_att(ncid, varid, 'scale_factor',scale_factor) == 0 ) then
+    ! Allocate data
+    allocate(vars(count_array(1),count_array(2)), stat=err)
+    call check_r( nf90_inq_varid(ncid, varname, varid) )
+    call check_r( nf90_get_var(ncid, varid, vars, start = istr, count = count_array))
+    if (nf90_get_att(ncid, varid, 'scale_factor',scale_factor) == 0 ) then
        call check_r( nf90_get_att(ncid, varid, 'scale_factor',scale_factor))
     else
        scale_factor=1.0
     end if
-    if ( nf90_get_att(ncid, varid, 'add_offset',add_offset) == 0 ) then
+    if (nf90_get_att(ncid, varid, 'add_offset',add_offset) == 0 ) then
        call check_r( nf90_get_att(ncid, varid, 'add_offset',add_offset))
     else
        add_offset = 0.0
     end if
     vars = vars * scale_factor + add_offset
-    ! ! close file
+    ! close file
     call check_r(nf90_close(ncid))
-  end subroutine get_variable_2D
-    subroutine dget_variable_2D(fname,dim1name,dim2name,varname,dim1unit,dim2unit,varunit,&
-       & ndim1,ndim2,dim1,dim2,vars)
-    use netcdf
-    implicit none
-    integer,parameter :: idx=8,maxlen=400
-    character(len=*),  intent(in) :: fname
-    character(len=*),  intent(in) :: dim1name,dim2name,varname
-    character(len=*),  intent(inout) :: dim1unit,dim2unit,varunit
-    integer,intent(inout) :: ndim1,ndim2
-    real(idx), allocatable, intent(inout) :: dim1(:),dim2(:),vars(:,:)
-    integer,allocatable :: temp_cals(:),cals(:)
-    integer :: ncid
-    integer :: err
-    real(idx) :: scale_factor,add_offset
-    integer :: varid,dim1id,dim2id
-    integer :: start(2), count(2)
-    ! Open files
-    call check_r( nf90_open(trim(fname),nf90_nowrite,ncid))
-    if (allocated(dim1) .eqv. .true.) then
-       deallocate(dim1)
-    end if
-    if (allocated(dim2) .eqv. .true.) then
-       deallocate(dim2)
-    end if
-    if (allocated(vars) .eqv. .true.) then
-       deallocate(vars)
-    end if
-    ! Obtain dim1
-    call dget_dimension(ncid,dim1name,ndim1,dim1)
-    ! Obtain dim2
-    call dget_dimension(ncid,dim2name,ndim2,dim2)
-    ! Allocate data
-    allocate(vars(ndim1,ndim2), stat=err)
-    start = (/1,1/)
-    count = (/ndim1,ndim2/)
-    call check_r( nf90_inq_varid(ncid, varname, varid) )
-    call check_r( nf90_get_var(ncid, varid, vars, start = start, &
-         count = count) )
-
-    ! Get attributes
-    call check_r( nf90_inq_dimid(ncid, dim1name, dim1id) )
-    if ( nf90_get_att(ncid, dim1id, 'units',dim1unit) == 0 ) then
-       call check_r( nf90_get_att(ncid,dim1id, 'units',dim1unit))
-    else
-       dim1unit="None"
-    end if
-    call check_r( nf90_inq_dimid(ncid, dim2name, dim2id) )
-    if ( nf90_get_att(ncid, dim2id, 'units',dim2unit) == 0 ) then
-       call check_r( nf90_get_att(ncid,dim2id, 'units',dim2unit))
-    else
-       dim2unit="None"
-    end if
-    if ( nf90_get_att(ncid, varid, 'units',varunit) == 0 ) then
-       call check_r( nf90_get_att(ncid,varid, 'units',varunit))
-    else
-       varunit="None"
-    end if
-    if ( nf90_get_att(ncid, varid, 'scale_factor',scale_factor) == 0 ) then
-       call check_r( nf90_get_att(ncid, varid, 'scale_factor',scale_factor))
-    else
-       scale_factor=1.0
-    end if
-    if ( nf90_get_att(ncid, varid, 'add_offset',add_offset) == 0 ) then
-       call check_r( nf90_get_att(ncid, varid, 'add_offset',add_offset))
-    else
-       add_offset = 0.0
-    end if
-    vars = vars * scale_factor + add_offset
-    ! ! close file
-    call check_r(nf90_close(ncid))
-  end subroutine dget_variable_2D
-  subroutine get_variable_2D_nc(fname,dim1name,dim2name,varname,&
-       & ndim1,ndim2,vars)
-    use netcdf
-    implicit none
-    integer,parameter :: idx=4,maxlen=400
-    character(len=*),  intent(in) :: fname
-    character(len=*),  intent(in) :: dim1name,dim2name,varname
-    integer,intent(inout) :: ndim1,ndim2
-    real(idx), allocatable, intent(inout) :: vars(:,:)
-    integer,allocatable :: temp_cals(:),cals(:)
-    integer :: ncid
-    integer :: err
-    real(idx) :: scale_factor,add_offset
-    integer :: varid,dim1id,dim2id
-    integer :: start(2), count(2)
-    ! Open files
-    call check_r( nf90_open(trim(fname),nf90_nowrite,ncid))
-    if (allocated(vars) .eqv. .true.) then
-       deallocate(vars)
-    end if
-    ! Obtain dim1
-    call get_ndim(ncid,dim1name,ndim1)
-    ! Obtain dim2
-    call get_ndim(ncid,dim2name,ndim2)
-    ! Allocate data
-    allocate(vars(ndim1,ndim2), stat=err)
-    start = (/1,1/)
-    count = (/ndim1,ndim2/)
-    call check_r( nf90_inq_varid(ncid, varname, varid) )
-    call check_r( nf90_get_var(ncid, varid, vars, start = start, &
-         count = count) )
-
-    if ( nf90_get_att(ncid, varid, 'scale_factor',scale_factor) == 0 ) then
-       call check_r( nf90_get_att(ncid, varid, 'scale_factor',scale_factor))
-    else
-       scale_factor=1.0
-    end if
-    if ( nf90_get_att(ncid, varid, 'add_offset',add_offset) == 0 ) then
-       call check_r( nf90_get_att(ncid, varid, 'add_offset',add_offset))
-    else
-       add_offset = 0.0
-    end if
-    vars = vars * scale_factor + add_offset
-    ! ! close file
-    call check_r(nf90_close(ncid))
-  end subroutine get_variable_2D_nc
-  ! Non 
-  subroutine dget_variable_2D_nc(fname,dim1name,dim2name,varname,&
-       & ndim1,ndim2,vars)
-    use netcdf
-    implicit none
-    integer,parameter :: idx=8,maxlen=400
-    character(len=*),  intent(in) :: fname
-    character(len=*),  intent(in) :: dim1name,dim2name,varname
-    integer,intent(inout) :: ndim1,ndim2
-    real(idx), allocatable, intent(inout) :: vars(:,:)
-    integer,allocatable :: temp_cals(:),cals(:)
-    integer :: ncid
-    integer :: err
-    real(idx) :: scale_factor,add_offset
-    integer :: varid,dim1id,dim2id
-    integer :: start(2), count(2)
-    ! Open files
-    call check_r( nf90_open(trim(fname),nf90_nowrite,ncid))
-    if (allocated(vars) .eqv. .true.) then
-       deallocate(vars)
-    end if
-    ! Obtain dim1
-    call get_ndim(ncid,dim1name,ndim1)
-    ! Obtain dim2
-    call get_ndim(ncid,dim2name,ndim2)
-    ! Allocate data
-    allocate(vars(ndim1,ndim2), stat=err)
-    start = (/1,1/)
-    count = (/ndim1,ndim2/)
-    call check_r( nf90_inq_varid(ncid, varname, varid) )
-    call check_r( nf90_get_var(ncid, varid, vars, start = start, &
-         count = count) )
-
-    if ( nf90_get_att(ncid, varid, 'scale_factor',scale_factor) == 0 ) then
-       call check_r( nf90_get_att(ncid, varid, 'scale_factor',scale_factor))
-    else
-       scale_factor=1.0
-    end if
-    if ( nf90_get_att(ncid, varid, 'add_offset',add_offset) == 0 ) then
-       call check_r( nf90_get_att(ncid, varid, 'add_offset',add_offset))
-    else
-       add_offset = 0.0
-    end if
-    vars = vars * scale_factor + add_offset
-    ! ! close file
-    call check_r(nf90_close(ncid))
-  end subroutine dget_variable_2D_nc
-  subroutine get_variable_2D_wr(fname,varname,istr_1,iend_1,istr_2,iend_2,vars)
+  end subroutine get_variable_2d_wr_i
+  subroutine get_variable_2d_wr_f(fname,varname,istr,iend,vars)
     use netcdf
     implicit none
     integer,parameter :: idx=4,maxlen=400,ndim=2
     character(len=*),  intent(in) :: fname,varname
-    integer,intent(in) :: istr_1,iend_1
-    integer,intent(in) :: istr_2,iend_2
+    integer,intent(in) :: istr(ndim),iend(ndim)
     real(idx), allocatable, intent(inout) :: vars(:,:)
-    integer :: ndim1,ndim2
-    integer :: ncid,varid
-    integer :: err
+    integer :: ncid,varid,err,i
     real(idx) :: scale_factor,add_offset
-    integer :: start(ndim), count(ndim)
+    integer :: count_array(ndim)
     ! Open files
-    call check_r(nf90_open(trim(fname),nf90_nowrite,ncid))
-    
+    call check_r(nf90_open(trim(fname),nf90_nowrite,ncid))    
     if (allocated(vars) .eqv. .true.) then
        deallocate(vars)
     end if
-    ndim1 = iend_1-istr_1+1
-    ndim2 = iend_2-istr_2+1
+    do i=1,ndim
+       count_array(i)=iend(i)-istr(i)+1
+    end do
 
     ! Allocate data
-    allocate(vars(ndim1,ndim2), stat=err)
-    start = (/istr_1,istr_2/)
-    count = (/ndim1,ndim2/)
+    allocate(vars(count_array(1),count_array(2)), stat=err)
     call check_r( nf90_inq_varid(ncid, varname, varid) )
-    call check_r( nf90_get_var(ncid, varid, vars, start = start, &
-         count = count) )
+    call check_r( nf90_get_var(ncid, varid, vars, start = istr, count = count_array))
     if (nf90_get_att(ncid, varid, 'scale_factor',scale_factor) == 0 ) then
        call check_r( nf90_get_att(ncid, varid, 'scale_factor',scale_factor))
     else
@@ -835,38 +543,32 @@ contains
        add_offset = 0.0
     end if
     vars = vars * scale_factor + add_offset
-    ! ! close file
+    ! close file
     call check_r(nf90_close(ncid))
-  end subroutine get_variable_2D_wr
-    subroutine dget_variable_2D_wr(fname,varname,istr_1,iend_1,istr_2,iend_2,vars)
+  end subroutine get_variable_2d_wr_f
+  subroutine get_variable_2d_wr_d(fname,varname,istr,iend,vars)
     use netcdf
     implicit none
     integer,parameter :: idx=8,maxlen=400,ndim=2
     character(len=*),  intent(in) :: fname,varname
-    integer,intent(in) :: istr_1,iend_1
-    integer,intent(in) :: istr_2,iend_2
+    integer,intent(in) :: istr(ndim),iend(ndim)
     real(idx), allocatable, intent(inout) :: vars(:,:)
-    integer :: ndim1,ndim2
-    integer :: ncid,varid
-    integer :: err
+    integer :: ncid,varid,err,i
     real(idx) :: scale_factor,add_offset
-    integer :: start(ndim), count(ndim)
+    integer :: count_array(ndim)
     ! Open files
-    call check_r(nf90_open(trim(fname),nf90_nowrite,ncid))
-    
+    call check_r(nf90_open(trim(fname),nf90_nowrite,ncid))    
     if (allocated(vars) .eqv. .true.) then
        deallocate(vars)
     end if
-    ndim1 = iend_1-istr_1+1
-    ndim2 = iend_2-istr_2+1
+    do i=1,ndim
+       count_array(i)=iend(i)-istr(i)+1
+    end do
 
     ! Allocate data
-    allocate(vars(ndim1,ndim2), stat=err)
-    start = (/istr_1,istr_2/)
-    count = (/ndim1,ndim2/)
+    allocate(vars(count_array(1),count_array(2)), stat=err)
     call check_r( nf90_inq_varid(ncid, varname, varid) )
-    call check_r( nf90_get_var(ncid, varid, vars, start = start, &
-         count = count) )
+    call check_r( nf90_get_var(ncid, varid, vars, start = istr, count = count_array))
     if (nf90_get_att(ncid, varid, 'scale_factor',scale_factor) == 0 ) then
        call check_r( nf90_get_att(ncid, varid, 'scale_factor',scale_factor))
     else
@@ -878,309 +580,72 @@ contains
        add_offset = 0.0
     end if
     vars = vars * scale_factor + add_offset
-    ! ! close file
+    ! close file
     call check_r(nf90_close(ncid))
-  end subroutine dget_variable_2D_wr
-
-  ! 3D
-  subroutine get_variable_3D(fname,dim1name,dim2name,dim3name,varname,dim1unit,dim2unit,dim3unit,varunit,&
-       & ndim1,ndim2,ndim3,dim1,dim2,dim3,vars)
+  end subroutine get_variable_2d_wr_d
+  !=============================================!  
+  ! 3-D                                         !
+  !=============================================!  
+  subroutine get_variable_3D_wr_i(fname,varname,istr,iend,vars)
     use netcdf
     implicit none
-    integer,parameter :: idx=4,maxlen=400
-    character(len=*),  intent(in) :: fname
-    character(len=*),  intent(in) :: dim1name,dim2name,dim3name,varname
-    character(len=*),  intent(inout) :: dim1unit,dim2unit,dim3unit,varunit
-    integer,intent(inout) :: ndim1,ndim2,ndim3
-    real(idx), allocatable, intent(inout) :: dim1(:),dim2(:),dim3(:),vars(:,:,:)
-    integer :: ncid
-    integer :: err
-    real(idx) :: scale_factor,add_offset
-    integer :: varid,dim1id,dim2id,dim3id
-    integer :: start(3), count(3),shapes(3)
+    integer,parameter :: maxlen=400,ndim=3
+    character(len=*),  intent(in) :: fname,varname
+    integer,intent(in) :: istr(ndim),iend(ndim)
+    integer, allocatable, intent(inout) :: vars(:,:,:)
+    integer :: ncid,varid,err,i
+    integer :: scale_factor,add_offset
+    integer :: count_array(ndim)
     ! Open files
-    call check_r( nf90_open(trim(fname),nf90_nowrite,ncid))
-    if (allocated(dim1) .eqv. .true.) then
-       deallocate(dim1)
-    end if
-    if (allocated(dim2) .eqv. .true.) then
-       deallocate(dim2)
-    end if
-    if (allocated(dim3) .eqv. .true.) then
-       deallocate(dim3)
-    end if
+    call check_r(nf90_open(trim(fname),nf90_nowrite,ncid))    
     if (allocated(vars) .eqv. .true.) then
        deallocate(vars)
     end if
-    ! Obtain dim1
-    call get_dimension(ncid,dim1name,ndim1,dim1)
-    ! Obtain dim2
-    call get_dimension(ncid,dim2name,ndim2,dim2)
-    ! Obtain dim3
-    call get_dimension(ncid,dim3name,ndim3,dim3)
-    ! Allocate data
-    allocate(vars(ndim1,ndim2,ndim3), stat=err)
-    start = (/1,1,1/)
-    count = (/ndim1,ndim2,ndim3/)
-    call check_r( nf90_inq_varid(ncid, varname, varid) )
-    call check_r( nf90_get_var(ncid, varid, vars, start = start, &
-         count = count) )
+    do i=1,ndim
+       count_array(i)=iend(i)-istr(i)+1
+    end do
 
-    ! Get attributes
-    call check_r( nf90_inq_dimid(ncid, dim1name, dim1id) )
-    if ( nf90_get_att(ncid, dim1id, 'units',dim1unit) == 0 ) then
-       call check_r( nf90_get_att(ncid,dim1id, 'units',dim1unit))
-    else
-       dim1unit="None"
-    end if
-    call check_r( nf90_inq_dimid(ncid, dim2name, dim2id) )
-    if ( nf90_get_att(ncid, dim2id, 'units',dim2unit) == 0 ) then
-       call check_r( nf90_get_att(ncid,dim2id, 'units',dim2unit))
-    else
-       dim2unit="None"
-    end if
-    call check_r( nf90_inq_dimid(ncid, dim3name, dim3id) )
-    if ( nf90_get_att(ncid, dim3id, 'units',dim3unit) == 0 ) then
-       call check_r( nf90_get_att(ncid,dim3id, 'units',dim3unit))
-    else
-       dim3unit="None"
-    end if
-    if ( nf90_get_att(ncid, varid, 'units',varunit) == 0 ) then
-       call check_r( nf90_get_att(ncid,varid, 'units',varunit))
-    else
-       varunit="None"
-    end if
-    if ( nf90_get_att(ncid, varid, 'scale_factor',scale_factor) == 0 ) then
+    ! Allocate data
+    allocate(vars(count_array(1),count_array(2),count_array(3)), stat=err)
+    call check_r( nf90_inq_varid(ncid, varname, varid) )
+    call check_r( nf90_get_var(ncid, varid, vars, start = istr, count = count_array))
+    if (nf90_get_att(ncid, varid, 'scale_factor',scale_factor) == 0 ) then
        call check_r( nf90_get_att(ncid, varid, 'scale_factor',scale_factor))
     else
        scale_factor=1.0
     end if
-    if ( nf90_get_att(ncid, varid, 'add_offset',add_offset) == 0 ) then
+    if (nf90_get_att(ncid, varid, 'add_offset',add_offset) == 0 ) then
        call check_r( nf90_get_att(ncid, varid, 'add_offset',add_offset))
     else
        add_offset = 0.0
     end if
     vars = vars * scale_factor + add_offset
-    shapes=shape(vars)
-    ndim1=shapes(1) ; ndim2=shapes(2)
-    ndim1=shapes(3)
-    ! ! close file
+    ! close file
     call check_r(nf90_close(ncid))
-  end subroutine get_variable_3D
-  subroutine dget_variable_3D(fname,dim1name,dim2name,dim3name,varname,dim1unit,dim2unit,dim3unit,varunit,&
-       & ndim1,ndim2,ndim3,dim1,dim2,dim3,vars)
-    use netcdf
-    implicit none
-    integer,parameter :: idx=8,maxlen=400
-    character(len=*),  intent(in) :: fname
-    character(len=*),  intent(in) :: dim1name,dim2name,dim3name,varname
-    character(len=*),  intent(inout) :: dim1unit,dim2unit,dim3unit,varunit
-    integer,intent(inout) :: ndim1,ndim2,ndim3
-    real(idx), allocatable, intent(inout) :: dim1(:),dim2(:),dim3(:),vars(:,:,:)
-    integer :: ncid
-    integer :: err
-    real(idx) :: scale_factor,add_offset
-    integer :: varid,dim1id,dim2id,dim3id
-    integer :: start(3), count(3),shapes(3)
-    ! Open files
-    call check_r( nf90_open(trim(fname),nf90_nowrite,ncid))
-    if (allocated(dim1) .eqv. .true.) then
-       deallocate(dim1)
-    end if
-    if (allocated(dim2) .eqv. .true.) then
-       deallocate(dim2)
-    end if
-    if (allocated(dim3) .eqv. .true.) then
-       deallocate(dim3)
-    end if
-    if (allocated(vars) .eqv. .true.) then
-       deallocate(vars)
-    end if
-    ! Obtain dim1
-    call dget_dimension(ncid,dim1name,ndim1,dim1)
-    ! Obtain dim2
-    call dget_dimension(ncid,dim2name,ndim2,dim2)
-    ! Obtain dim3
-    call dget_dimension(ncid,dim3name,ndim3,dim3)
-    ! Allocate data
-    allocate(vars(ndim1,ndim2,ndim3), stat=err)
-    start = (/1,1,1/)
-    count = (/ndim1,ndim2,ndim3/)
-    call check_r( nf90_inq_varid(ncid, varname, varid) )
-    call check_r( nf90_get_var(ncid, varid, vars, start = start, &
-         count = count) )
-
-    ! Get attributes
-    call check_r( nf90_inq_dimid(ncid, dim1name, dim1id) )
-    if ( nf90_get_att(ncid, dim1id, 'units',dim1unit) == 0 ) then
-       call check_r( nf90_get_att(ncid,dim1id, 'units',dim1unit))
-    else
-       dim1unit="None"
-    end if
-    call check_r( nf90_inq_dimid(ncid, dim2name, dim2id) )
-    if ( nf90_get_att(ncid, dim2id, 'units',dim2unit) == 0 ) then
-       call check_r( nf90_get_att(ncid,dim2id, 'units',dim2unit))
-    else
-       dim2unit="None"
-    end if
-    call check_r( nf90_inq_dimid(ncid, dim3name, dim3id) )
-    if ( nf90_get_att(ncid, dim3id, 'units',dim3unit) == 0 ) then
-       call check_r( nf90_get_att(ncid,dim3id, 'units',dim3unit))
-    else
-       dim3unit="None"
-    end if
-    if ( nf90_get_att(ncid, varid, 'units',varunit) == 0 ) then
-       call check_r( nf90_get_att(ncid,varid, 'units',varunit))
-    else
-       varunit="None"
-    end if
-    if ( nf90_get_att(ncid, varid, 'scale_factor',scale_factor) == 0 ) then
-       call check_r( nf90_get_att(ncid, varid, 'scale_factor',scale_factor))
-    else
-       scale_factor=1.0
-    end if
-    if ( nf90_get_att(ncid, varid, 'add_offset',add_offset) == 0 ) then
-       call check_r( nf90_get_att(ncid, varid, 'add_offset',add_offset))
-    else
-       add_offset = 0.0
-    end if
-    vars = vars * scale_factor + add_offset
-    shapes=shape(vars)
-    ndim1=shapes(1) ; ndim2=shapes(2)
-    ndim1=shapes(3)
-    ! ! close file
-    call check_r(nf90_close(ncid))
-  end subroutine dget_variable_3D
-  ! Variable only
-    subroutine get_variable_3D_nc(fname,dim1name,dim2name,dim3name,varname,&
-       & ndim1,ndim2,ndim3,vars)
-    use netcdf
-    implicit none
-    integer,parameter :: idx=4,maxlen=400
-    character(len=*),  intent(in) :: fname
-    character(len=*),  intent(in) :: dim1name,dim2name,dim3name,varname
-    integer,intent(inout) :: ndim1,ndim2,ndim3
-    real(idx), allocatable, intent(inout) :: vars(:,:,:)
-    integer :: ncid
-    integer :: err
-    real(idx) :: scale_factor,add_offset
-    integer :: varid,dim1id,dim2id,dim3id
-    integer :: start(3), count(3),shapes(3)
-    ! Open files
-    call check_r( nf90_open(trim(fname),nf90_nowrite,ncid))
-    if (allocated(vars) .eqv. .true.) then
-       deallocate(vars)
-    end if
-    ! Obtain dim1
-    call get_ndim(ncid,dim1name,ndim1)
-    ! Obtain dim2
-    call get_ndim(ncid,dim2name,ndim2)
-    ! Obtain dim3
-    call get_ndim(ncid,dim3name,ndim3)
-    ! Allocate data
-    allocate(vars(ndim1,ndim2,ndim3), stat=err)
-    start = (/1,1,1/)
-    count = (/ndim1,ndim2,ndim3/)
-    call check_r( nf90_inq_varid(ncid, varname, varid) )
-    call check_r( nf90_get_var(ncid, varid, vars, start = start, &
-         count = count) )
-
-    if ( nf90_get_att(ncid, varid, 'scale_factor',scale_factor) == 0 ) then
-       call check_r( nf90_get_att(ncid, varid, 'scale_factor',scale_factor))
-    else
-       scale_factor=1.0
-    end if
-    if ( nf90_get_att(ncid, varid, 'add_offset',add_offset) == 0 ) then
-       call check_r( nf90_get_att(ncid, varid, 'add_offset',add_offset))
-    else
-       add_offset = 0.0
-    end if
-    vars = vars * scale_factor + add_offset
-    shapes=shape(vars)
-    ndim1=shapes(1) ; ndim2=shapes(2)
-    ndim3=shapes(3)
-    ! ! close file
-    call check_r(nf90_close(ncid))
-  end subroutine get_variable_3D_nc
-  subroutine dget_variable_3D_nc(fname,dim1name,dim2name,dim3name,varname,&
-       & ndim1,ndim2,ndim3,vars)
-    use netcdf
-    implicit none
-    integer,parameter :: idx=8,maxlen=400
-    character(len=*),  intent(in) :: fname
-    character(len=*),  intent(in) :: dim1name,dim2name,dim3name,varname
-    integer,intent(inout) :: ndim1,ndim2,ndim3
-    real(idx), allocatable, intent(inout) :: vars(:,:,:)
-    integer :: ncid
-    integer :: err
-    real(idx) :: scale_factor,add_offset
-    integer :: varid,dim1id,dim2id,dim3id
-    integer :: start(3), count(3),shapes(3)
-    ! Open files
-    call check_r( nf90_open(trim(fname),nf90_nowrite,ncid))
-    if (allocated(vars) .eqv. .true.) then
-       deallocate(vars)
-    end if
-    ! Obtain dim1
-    call get_ndim(ncid,dim1name,ndim1)
-    ! Obtain dim2
-    call get_ndim(ncid,dim2name,ndim2)
-    ! Obtain dim3
-    call get_ndim(ncid,dim3name,ndim3)
-    ! Allocate data
-    allocate(vars(ndim1,ndim2,ndim3), stat=err)
-    start = (/1,1,1/)
-    count = (/ndim1,ndim2,ndim3/)
-    call check_r( nf90_inq_varid(ncid, varname, varid) )
-    call check_r( nf90_get_var(ncid, varid, vars, start = start, &
-         count = count) )
-
-    if ( nf90_get_att(ncid, varid, 'scale_factor',scale_factor) == 0 ) then
-       call check_r( nf90_get_att(ncid, varid, 'scale_factor',scale_factor))
-    else
-       scale_factor=1.0
-    end if
-    if ( nf90_get_att(ncid, varid, 'add_offset',add_offset) == 0 ) then
-       call check_r( nf90_get_att(ncid, varid, 'add_offset',add_offset))
-    else
-       add_offset = 0.0
-    end if
-    vars = vars * scale_factor + add_offset
-    shapes=shape(vars)
-    ndim1=shapes(1) ; ndim2=shapes(2)
-    ndim3=shapes(3)
-    ! ! close file
-    call check_r(nf90_close(ncid))
-  end subroutine dget_variable_3D_nc
-  subroutine get_variable_3D_wr(fname,varname,istr_1,iend_1,istr_2,iend_2,istr_3,iend_3,vars)
+  end subroutine get_variable_3D_wr_i
+  subroutine get_variable_3D_wr_f(fname,varname,istr,iend,vars)
     use netcdf
     implicit none
     integer,parameter :: idx=4,maxlen=400,ndim=3
     character(len=*),  intent(in) :: fname,varname
-    integer,intent(in) :: istr_1,iend_1
-    integer,intent(in) :: istr_2,iend_2
-    integer,intent(in) :: istr_3,iend_3
+    integer,intent(in) :: istr(ndim),iend(ndim)
     real(idx), allocatable, intent(inout) :: vars(:,:,:)
-    integer :: ndim1,ndim2,ndim3
-    integer :: ncid,varid
-    integer :: err
+    integer :: ncid,varid,err,i
     real(idx) :: scale_factor,add_offset
-    integer :: start(ndim), count(ndim)
+    integer :: count_array(ndim)
     ! Open files
     call check_r(nf90_open(trim(fname),nf90_nowrite,ncid))    
     if (allocated(vars) .eqv. .true.) then
        deallocate(vars)
     end if
-    ndim1 = iend_1-istr_1+1
-    ndim2 = iend_2-istr_2+1
-    ndim3 = iend_3-istr_3+1
+    do i=1,ndim
+       count_array(i)=iend(i)-istr(i)+1
+    end do
+
     ! Allocate data
-    allocate(vars(ndim1,ndim2,ndim3), stat=err)
-    start = (/istr_1,istr_2,istr_3/)
-    count = (/ndim1,ndim2,ndim3/)
+    allocate(vars(count_array(1),count_array(2),count_array(3)), stat=err)
     call check_r( nf90_inq_varid(ncid, varname, varid) )
-    call check_r( nf90_get_var(ncid, varid, vars, start = start, &
-         count = count) )
+    call check_r( nf90_get_var(ncid, varid, vars, start = istr, count = count_array))
     if (nf90_get_att(ncid, varid, 'scale_factor',scale_factor) == 0 ) then
        call check_r( nf90_get_att(ncid, varid, 'scale_factor',scale_factor))
     else
@@ -1192,38 +657,32 @@ contains
        add_offset = 0.0
     end if
     vars = vars * scale_factor + add_offset
-    ! ! close file
+    ! close file
     call check_r(nf90_close(ncid))
-  end subroutine get_variable_3D_wr
-  subroutine dget_variable_3D_wr(fname,varname,istr_1,iend_1,istr_2,iend_2,istr_3,iend_3,vars)
+  end subroutine get_variable_3D_wr_f
+  subroutine get_variable_3D_wr_d(fname,varname,istr,iend,vars)
     use netcdf
     implicit none
     integer,parameter :: idx=8,maxlen=400,ndim=3
     character(len=*),  intent(in) :: fname,varname
-    integer,intent(in) :: istr_1,iend_1
-    integer,intent(in) :: istr_2,iend_2
-    integer,intent(in) :: istr_3,iend_3
+    integer,intent(in) :: istr(ndim),iend(ndim)
     real(idx), allocatable, intent(inout) :: vars(:,:,:)
-    integer :: ndim1,ndim2,ndim3
-    integer :: ncid,varid
-    integer :: err
+    integer :: ncid,varid,err,i
     real(idx) :: scale_factor,add_offset
-    integer :: start(ndim), count(ndim)
+    integer :: count_array(ndim)
     ! Open files
     call check_r(nf90_open(trim(fname),nf90_nowrite,ncid))    
     if (allocated(vars) .eqv. .true.) then
        deallocate(vars)
     end if
-    ndim1 = iend_1-istr_1+1
-    ndim2 = iend_2-istr_2+1
-    ndim3 = iend_3-istr_3+1
+    do i=1,ndim
+       count_array(i)=iend(i)-istr(i)+1
+    end do
+
     ! Allocate data
-    allocate(vars(ndim1,ndim2,ndim3), stat=err)
-    start = (/istr_1,istr_2,istr_3/)
-    count = (/ndim1,ndim2,ndim3/)
+    allocate(vars(count_array(1),count_array(2),count_array(3)), stat=err)
     call check_r( nf90_inq_varid(ncid, varname, varid) )
-    call check_r( nf90_get_var(ncid, varid, vars, start = start, &
-         count = count) )
+    call check_r( nf90_get_var(ncid, varid, vars, start = istr, count = count_array))
     if (nf90_get_att(ncid, varid, 'scale_factor',scale_factor) == 0 ) then
        call check_r( nf90_get_att(ncid, varid, 'scale_factor',scale_factor))
     else
@@ -1235,351 +694,35 @@ contains
        add_offset = 0.0
     end if
     vars = vars * scale_factor + add_offset
-    ! ! close file
+    ! close file
     call check_r(nf90_close(ncid))
-  end subroutine dget_variable_3D_wr
-  !==================================================
-  ! 4D
-  !==================================================
-  subroutine get_variable_4D(fname,dim1name,dim2name,dim3name,dim4name,varname,dim1unit,dim2unit,dim3unit,dim4unit,varunit,&
-       & ndim1,ndim2,ndim3,ndim4,dim1,dim2,dim3,dim4,vars)
+  end subroutine get_variable_3D_wr_d
+  !==================================================!
+  ! 4-D                                               !
+  !==================================================!
+  subroutine get_variable_4D_wr_i(fname,varname,istr,iend,vars)
     use netcdf
     implicit none
-    integer,parameter :: idx=4,maxlen=400
-    character(len=*),  intent(in) :: fname
-    character(len=*),  intent(in) :: dim1name,dim2name,dim3name,dim4name,varname
-    character(len=*),  intent(inout) :: dim1unit,dim2unit,dim3unit,dim4unit,varunit
-    integer,intent(inout) :: ndim1,ndim2,ndim3,ndim4
-    real(idx), allocatable, intent(inout) :: dim1(:),dim2(:),dim3(:),dim4(:),vars(:,:,:,:)
-    integer :: ncid
-    integer :: err
-    real(idx) :: scale_factor,add_offset
-    integer :: varid,dim1id,dim2id,dim3id,dim4id
-    integer :: start(4), count(4),shapes(4)
-    ! Open files
-    call check_r( nf90_open(trim(fname),nf90_nowrite,ncid))
-    if (allocated(dim1) .eqv. .true.) then
-       deallocate(dim1)
-    end if
-    if (allocated(dim2) .eqv. .true.) then
-       deallocate(dim2)
-    end if
-    if (allocated(dim3) .eqv. .true.) then
-       deallocate(dim3)
-    end if
-    if (allocated(dim4) .eqv. .true.) then
-       deallocate(dim4)
-    end if
-    
-    if (allocated(vars) .eqv. .true.) then
-       deallocate(vars)
-    end if
-    ! Obtain dim1
-    call get_dimension(ncid,dim1name,ndim1,dim1)
-    ! Obtain dim2
-    call get_dimension(ncid,dim2name,ndim2,dim2)
-    ! Obtain dim3
-    call get_dimension(ncid,dim3name,ndim3,dim3)
-    ! Obtain dim4
-    call get_dimension(ncid,dim4name,ndim4,dim4)
- 
-    ! Allocate data
-    allocate(vars(ndim1,ndim2,ndim3,ndim4), stat=err)
-    start = (/1,1,1,1/)
-    count = (/ndim1,ndim2,ndim3,ndim4/)
-    call check_r( nf90_inq_varid(ncid, varname, varid) )
-    call check_r( nf90_get_var(ncid, varid, vars, start = start, &
-         count = count) )
-
-    ! Get attributes
-    call check_r( nf90_inq_dimid(ncid, dim1name, dim1id) )
-    if ( nf90_get_att(ncid, dim1id, 'units',dim1unit) == 0 ) then
-       call check_r( nf90_get_att(ncid,dim1id, 'units',dim1unit))
-    else
-       dim1unit="None"
-    end if
-    call check_r( nf90_inq_dimid(ncid, dim2name, dim2id) )
-    if ( nf90_get_att(ncid, dim2id, 'units',dim2unit) == 0 ) then
-       call check_r( nf90_get_att(ncid,dim2id, 'units',dim2unit))
-    else
-       dim2unit="None"
-    end if
-    call check_r( nf90_inq_dimid(ncid, dim3name, dim3id) )
-    if ( nf90_get_att(ncid, dim3id, 'units',dim3unit) == 0 ) then
-       call check_r( nf90_get_att(ncid,dim3id, 'units',dim3unit))
-    else
-       dim3unit="None"
-    end if
-    call check_r( nf90_inq_dimid(ncid, dim4name, dim4id) )
-    if ( nf90_get_att(ncid, dim4id, 'units',dim4unit) == 0 ) then
-       call check_r( nf90_get_att(ncid,dim4id, 'units',dim4unit))
-    else
-       dim4unit="None"
-    end if
-
-    if ( nf90_get_att(ncid, varid, 'units',varunit) == 0 ) then
-       call check_r( nf90_get_att(ncid,varid, 'units',varunit))
-    else
-       varunit="None"
-    end if
-    if ( nf90_get_att(ncid, varid, 'scale_factor',scale_factor) == 0 ) then
-       call check_r( nf90_get_att(ncid, varid, 'scale_factor',scale_factor))
-    else
-       scale_factor=1.0
-    end if
-    if ( nf90_get_att(ncid, varid, 'add_offset',add_offset) == 0 ) then
-       call check_r( nf90_get_att(ncid, varid, 'add_offset',add_offset))
-    else
-       add_offset = 0.0
-    end if
-    vars = vars * scale_factor + add_offset
-    shapes=shape(vars)
-    ndim1=shapes(1) ; ndim2=shapes(2)
-    ndim3=shapes(3) ; ndim4=shapes(4)
-    ! ! close file
-    call check_r(nf90_close(ncid))
-  end subroutine get_variable_4D
-  subroutine dget_variable_4D(fname,dim1name,dim2name,dim3name,dim4name,varname,dim1unit,dim2unit,dim3unit,dim4unit,varunit,&
-       & ndim1,ndim2,ndim3,ndim4,dim1,dim2,dim3,dim4,vars)
-    use netcdf
-    implicit none
-    integer,parameter :: idx=8,maxlen=400
-    character(len=*),  intent(in) :: fname
-    character(len=*),  intent(in) :: dim1name,dim2name,dim3name,dim4name,varname
-    character(len=*),  intent(inout) :: dim1unit,dim2unit,dim3unit,dim4unit,varunit
-    integer,intent(inout) :: ndim1,ndim2,ndim3,ndim4
-    real(idx), allocatable, intent(inout) :: dim1(:),dim2(:),dim3(:),dim4(:),vars(:,:,:,:)
-    integer :: ncid
-    integer :: err
-    real(idx) :: scale_factor,add_offset
-    integer :: varid,dim1id,dim2id,dim3id,dim4id
-    integer :: start(4), count(4),shapes(4)
-    ! Open files
-    call check_r( nf90_open(trim(fname),nf90_nowrite,ncid))
-    if (allocated(dim1) .eqv. .true.) then
-       deallocate(dim1)
-    end if
-    if (allocated(dim2) .eqv. .true.) then
-       deallocate(dim2)
-    end if
-    if (allocated(dim3) .eqv. .true.) then
-       deallocate(dim3)
-    end if
-    if (allocated(dim4) .eqv. .true.) then
-       deallocate(dim4)
-    end if
-    
-    if (allocated(vars) .eqv. .true.) then
-       deallocate(vars)
-    end if
-    ! Obtain dim1
-    call dget_dimension(ncid,dim1name,ndim1,dim1)
-    ! Obtain dim2
-    call dget_dimension(ncid,dim2name,ndim2,dim2)
-    ! Obtain dim3
-    call dget_dimension(ncid,dim3name,ndim3,dim3)
-    ! Obtain dim4
-    call dget_dimension(ncid,dim4name,ndim4,dim4)
- 
-    ! Allocate data
-    allocate(vars(ndim1,ndim2,ndim3,ndim4), stat=err)
-    start = (/1,1,1,1/)
-    count = (/ndim1,ndim2,ndim3,ndim4/)
-    call check_r( nf90_inq_varid(ncid, varname, varid) )
-    call check_r( nf90_get_var(ncid, varid, vars, start = start, &
-         count = count) )
-
-    ! Get attributes
-    call check_r( nf90_inq_dimid(ncid, dim1name, dim1id) )
-    if ( nf90_get_att(ncid, dim1id, 'units',dim1unit) == 0 ) then
-       call check_r( nf90_get_att(ncid,dim1id, 'units',dim1unit))
-    else
-       dim1unit="None"
-    end if
-    call check_r( nf90_inq_dimid(ncid, dim2name, dim2id) )
-    if ( nf90_get_att(ncid, dim2id, 'units',dim2unit) == 0 ) then
-       call check_r( nf90_get_att(ncid,dim2id, 'units',dim2unit))
-    else
-       dim2unit="None"
-    end if
-    call check_r( nf90_inq_dimid(ncid, dim3name, dim3id) )
-    if ( nf90_get_att(ncid, dim3id, 'units',dim3unit) == 0 ) then
-       call check_r( nf90_get_att(ncid,dim3id, 'units',dim3unit))
-    else
-       dim3unit="None"
-    end if
-    call check_r( nf90_inq_dimid(ncid, dim4name, dim4id) )
-    if ( nf90_get_att(ncid, dim4id, 'units',dim4unit) == 0 ) then
-       call check_r( nf90_get_att(ncid,dim4id, 'units',dim4unit))
-    else
-       dim4unit="None"
-    end if
-
-    if ( nf90_get_att(ncid, varid, 'units',varunit) == 0 ) then
-       call check_r( nf90_get_att(ncid,varid, 'units',varunit))
-    else
-       varunit="None"
-    end if
-    if ( nf90_get_att(ncid, varid, 'scale_factor',scale_factor) == 0 ) then
-       call check_r( nf90_get_att(ncid, varid, 'scale_factor',scale_factor))
-    else
-       scale_factor=1.0
-    end if
-    if ( nf90_get_att(ncid, varid, 'add_offset',add_offset) == 0 ) then
-       call check_r( nf90_get_att(ncid, varid, 'add_offset',add_offset))
-    else
-       add_offset = 0.0
-    end if
-    vars = vars * scale_factor + add_offset
-    shapes=shape(vars)
-    ndim1=shapes(1) ; ndim2=shapes(2)
-    ndim3=shapes(3) ; ndim4=shapes(4)
-    ! ! close file
-    call check_r(nf90_close(ncid))
-  end subroutine dget_variable_4D
-  ! Variable only
-    subroutine get_variable_4D_nc(fname,dim1name,dim2name,dim3name,dim4name,varname,&
-       & ndim1,ndim2,ndim3,ndim4,vars)
-    use netcdf
-    implicit none
-    integer,parameter :: idx=4,maxlen=400
-    character(len=*),  intent(in) :: fname
-    character(len=*),  intent(in) :: dim1name,dim2name,dim3name,dim4name,varname
-    integer,intent(inout) :: ndim1,ndim2,ndim3,ndim4
-    real(idx), allocatable, intent(inout) :: vars(:,:,:,:)
-    integer :: ncid
-    integer :: err
-    real(idx) :: scale_factor,add_offset
-    integer :: varid,dim1id,dim2id,dim3id,dim4id
-    integer :: start(4), count(4),shapes(4)
-    ! Open files
-    call check_r( nf90_open(trim(fname),nf90_nowrite,ncid))
-    
-    if (allocated(vars) .eqv. .true.) then
-       deallocate(vars)
-    end if
-    ! Obtain dim1
-    call get_ndim(ncid,dim1name,ndim1)
-    ! Obtain dim2
-    call get_ndim(ncid,dim2name,ndim2)
-    ! Obtain dim3
-    call get_ndim(ncid,dim3name,ndim3)
-    ! Obtain dim4
-    call get_ndim(ncid,dim4name,ndim4)
- 
-    ! Allocate data
-    allocate(vars(ndim1,ndim2,ndim3,ndim4), stat=err)
-    start = (/1,1,1,1/)
-    count = (/ndim1,ndim2,ndim3,ndim4/)
-    call check_r( nf90_inq_varid(ncid, varname, varid) )
-    call check_r( nf90_get_var(ncid, varid, vars, start = start, &
-         count = count) )
-
-    if ( nf90_get_att(ncid, varid, 'scale_factor',scale_factor) == 0 ) then
-       call check_r( nf90_get_att(ncid, varid, 'scale_factor',scale_factor))
-    else
-       scale_factor=1.0
-    end if
-    if ( nf90_get_att(ncid, varid, 'add_offset',add_offset) == 0 ) then
-       call check_r( nf90_get_att(ncid, varid, 'add_offset',add_offset))
-    else
-       add_offset = 0.0
-    end if
-    vars = vars * scale_factor + add_offset
-    shapes=shape(vars)
-    ndim1=shapes(1) ; ndim2=shapes(2)
-    ndim3=shapes(3) ; ndim4=shapes(4)
-    ! ! close file
-    call check_r(nf90_close(ncid))
-  end subroutine get_variable_4D_nc
-  subroutine dget_variable_4D_nc(fname,dim1name,dim2name,dim3name,dim4name,varname,&
-       & ndim1,ndim2,ndim3,ndim4,vars)
-    use netcdf
-    implicit none
-    integer,parameter :: idx=8,maxlen=400
-    character(len=*),  intent(in) :: fname
-    character(len=*),  intent(in) :: dim1name,dim2name,dim3name,dim4name,varname
-    integer,intent(inout) :: ndim1,ndim2,ndim3,ndim4
-    real(idx), allocatable, intent(inout) :: vars(:,:,:,:)
-    integer :: ncid
-    integer :: err
-    real(idx) :: scale_factor,add_offset
-    integer :: varid,dim1id,dim2id,dim3id,dim4id
-    integer :: start(4), count(4),shapes(4)
-    ! Open files
-    call check_r( nf90_open(trim(fname),nf90_nowrite,ncid))
-    
-    if (allocated(vars) .eqv. .true.) then
-       deallocate(vars)
-    end if
-    ! Obtain dim1
-    call get_ndim(ncid,dim1name,ndim1)
-    ! Obtain dim2
-    call get_ndim(ncid,dim2name,ndim2)
-    ! Obtain dim3
-    call get_ndim(ncid,dim3name,ndim3)
-    ! Obtain dim4
-    call get_ndim(ncid,dim4name,ndim4)
- 
-    ! Allocate data
-    allocate(vars(ndim1,ndim2,ndim3,ndim4), stat=err)
-    start = (/1,1,1,1/)
-    count = (/ndim1,ndim2,ndim3,ndim4/)
-    call check_r( nf90_inq_varid(ncid, varname, varid) )
-    call check_r( nf90_get_var(ncid, varid, vars, start = start, &
-         count = count) )
-
-    if ( nf90_get_att(ncid, varid, 'scale_factor',scale_factor) == 0 ) then
-       call check_r( nf90_get_att(ncid, varid, 'scale_factor',scale_factor))
-    else
-       scale_factor=1.0
-    end if
-    if ( nf90_get_att(ncid, varid, 'add_offset',add_offset) == 0 ) then
-       call check_r( nf90_get_att(ncid, varid, 'add_offset',add_offset))
-    else
-       add_offset = 0.0
-    end if
-    vars = vars * scale_factor + add_offset
-    shapes=shape(vars)
-    ndim1=shapes(1) ; ndim2=shapes(2)
-    ndim3=shapes(3) ; ndim4=shapes(4)
-    ! ! close file
-    call check_r(nf90_close(ncid))
-  end subroutine dget_variable_4D_nc
-  subroutine get_variable_4D_wr(fname,varname,istr_1,iend_1,istr_2,iend_2,istr_3,iend_3,istr_4,iend_4,vars)
-    use netcdf
-    implicit none
-    integer,parameter :: idx=4,maxlen=400
+    integer,parameter :: maxlen=400,ndim=4
     character(len=*),  intent(in) :: fname,varname
-    integer,intent(in) :: istr_1,iend_1
-    integer,intent(in) :: istr_2,iend_2
-    integer,intent(in) :: istr_3,iend_3
-    integer,intent(in) :: istr_4,iend_4
-    real(idx), allocatable, intent(inout) :: vars(:,:,:,:)
-    integer :: ndim1,ndim2,ndim3,ndim4
-    integer :: ncid
-    integer :: err
-    real(idx) :: scale_factor,add_offset
-    integer :: varid,dim1id,dim2id,dim3id,dim4id
-    integer :: start(4), count(4),shapes(4)
+    integer,intent(in) :: istr(ndim),iend(ndim)
+    integer, allocatable, intent(inout) :: vars(:,:,:,:)
+    integer :: ncid,varid,err,i
+    integer :: scale_factor,add_offset
+    integer :: count_array(ndim)
     ! Open files
-    call check_r(nf90_open(trim(fname),nf90_nowrite,ncid))
-    
+    call check_r(nf90_open(trim(fname),nf90_nowrite,ncid))    
     if (allocated(vars) .eqv. .true.) then
        deallocate(vars)
     end if
-    ndim1 = iend_1-istr_1+1
-    ndim2 = iend_2-istr_2+1
-    ndim3 = iend_3-istr_3+1
-    ndim4 = iend_4-istr_4+1
+    do i=1,ndim
+       count_array(i)=iend(i)-istr(i)+1
+    end do
 
     ! Allocate data
-    allocate(vars(ndim1,ndim2,ndim3,ndim4), stat=err)
-    start = (/istr_1,istr_2,istr_3,istr_4/)
-    count = (/ndim1,ndim2,ndim3,ndim4/)
+    allocate(vars(count_array(1),count_array(2),count_array(3),count_array(4)), stat=err)
     call check_r( nf90_inq_varid(ncid, varname, varid) )
-    call check_r( nf90_get_var(ncid, varid, vars, start = start, &
-         count = count) )
+    call check_r( nf90_get_var(ncid, varid, vars, start = istr, count = count_array))
     if (nf90_get_att(ncid, varid, 'scale_factor',scale_factor) == 0 ) then
        call check_r( nf90_get_att(ncid, varid, 'scale_factor',scale_factor))
     else
@@ -1591,43 +734,69 @@ contains
        add_offset = 0.0
     end if
     vars = vars * scale_factor + add_offset
-    ! ! close file
+    ! close file
     call check_r(nf90_close(ncid))
-  end subroutine get_variable_4D_wr
-  subroutine dget_variable_4D_wr(fname,varname,istr_1,iend_1,istr_2,iend_2,istr_3,iend_3,istr_4,iend_4,vars)
+  end subroutine get_variable_4D_wr_i
+  subroutine get_variable_4D_wr_f(fname,varname,istr,iend,vars)
+    use netcdf
+    implicit none
+    integer,parameter :: idx=4,maxlen=400,ndim=4
+    character(len=*),  intent(in) :: fname,varname
+    integer,intent(in) :: istr(ndim),iend(ndim)
+    real(idx), allocatable, intent(inout) :: vars(:,:,:,:)
+    integer :: ncid,varid,err,i
+    real(idx) :: scale_factor,add_offset
+    integer :: count_array(ndim)
+    ! Open files
+    call check_r(nf90_open(trim(fname),nf90_nowrite,ncid))    
+    if (allocated(vars) .eqv. .true.) then
+       deallocate(vars)
+    end if
+    do i=1,ndim
+       count_array(i)=iend(i)-istr(i)+1
+    end do
+
+    ! Allocate data
+    allocate(vars(count_array(1),count_array(2),count_array(3),count_array(4)), stat=err)
+    call check_r( nf90_inq_varid(ncid, varname, varid) )
+    call check_r( nf90_get_var(ncid, varid, vars, start = istr, count = count_array))
+    if (nf90_get_att(ncid, varid, 'scale_factor',scale_factor) == 0 ) then
+       call check_r( nf90_get_att(ncid, varid, 'scale_factor',scale_factor))
+    else
+       scale_factor=1.0
+    end if
+    if (nf90_get_att(ncid, varid, 'add_offset',add_offset) == 0 ) then
+       call check_r( nf90_get_att(ncid, varid, 'add_offset',add_offset))
+    else
+       add_offset = 0.0
+    end if
+    vars = vars * scale_factor + add_offset
+    ! close file
+    call check_r(nf90_close(ncid))
+  end subroutine get_variable_4D_wr_f
+  subroutine get_variable_4D_wr_d(fname,varname,istr,iend,vars)
     use netcdf
     implicit none
     integer,parameter :: idx=8,maxlen=400,ndim=4
     character(len=*),  intent(in) :: fname,varname
-    integer,intent(in) :: istr_1,iend_1
-    integer,intent(in) :: istr_2,iend_2
-    integer,intent(in) :: istr_3,iend_3
-    integer,intent(in) :: istr_4,iend_4
+    integer,intent(in) :: istr(ndim),iend(ndim)
     real(idx), allocatable, intent(inout) :: vars(:,:,:,:)
-    integer :: ndim1,ndim2,ndim3,ndim4
-    integer :: ncid
-    integer :: err
+    integer :: ncid,varid,err,i
     real(idx) :: scale_factor,add_offset
-    integer :: varid
-    integer :: start(ndim), count(ndim)
+    integer :: count_array(ndim)
     ! Open files
-    call check_r(nf90_open(trim(fname),nf90_nowrite,ncid))
-    
+    call check_r(nf90_open(trim(fname),nf90_nowrite,ncid))    
     if (allocated(vars) .eqv. .true.) then
        deallocate(vars)
     end if
-    ndim1 = iend_1-istr_1+1
-    ndim2 = iend_2-istr_2+1
-    ndim3 = iend_3-istr_3+1
-    ndim4 = iend_4-istr_4+1
+    do i=1,ndim
+       count_array(i)=iend(i)-istr(i)+1
+    end do
 
     ! Allocate data
-    allocate(vars(ndim1,ndim2,ndim3,ndim4), stat=err)
-    start = (/istr_1,istr_2,istr_3,istr_4/)
-    count = (/ndim1,ndim2,ndim3,ndim4/)
+    allocate(vars(count_array(1),count_array(2),count_array(3),count_array(4)), stat=err)
     call check_r( nf90_inq_varid(ncid, varname, varid) )
-    call check_r( nf90_get_var(ncid, varid, vars, start = start, &
-         count = count) )
+    call check_r( nf90_get_var(ncid, varid, vars, start = istr, count = count_array))
     if (nf90_get_att(ncid, varid, 'scale_factor',scale_factor) == 0 ) then
        call check_r( nf90_get_att(ncid, varid, 'scale_factor',scale_factor))
     else
@@ -1639,46 +808,72 @@ contains
        add_offset = 0.0
     end if
     vars = vars * scale_factor + add_offset
-    ! ! close file
+    ! close file
     call check_r(nf90_close(ncid))
-  end subroutine dget_variable_4D_wr
+  end subroutine get_variable_4D_wr_d
+  !==================================================!
+  ! 5-D                                              !
+  !==================================================!
+  subroutine get_variable_5D_wr_i(fname,varname,istr,iend,vars)
+    use netcdf
+    implicit none
+    integer,parameter :: maxlen=400,ndim=5
+    character(len=*),  intent(in) :: fname,varname
+    integer,intent(in) :: istr(ndim),iend(ndim)
+    integer, allocatable, intent(inout) :: vars(:,:,:,:,:)
+    integer :: ncid,varid,err,i
+    integer :: scale_factor,add_offset
+    integer :: count_array(ndim)
+    ! Open files
+    call check_r(nf90_open(trim(fname),nf90_nowrite,ncid))    
+    if (allocated(vars) .eqv. .true.) then
+       deallocate(vars)
+    end if
+    do i=1,ndim
+       count_array(i)=iend(i)-istr(i)+1
+    end do
 
-  subroutine get_variable_5D_wr(fname,varname,istr_1,iend_1,istr_2,iend_2,istr_3,iend_3,istr_4,iend_4,istr_5,iend_5,vars)
+    ! Allocate data
+    allocate(vars(count_array(1),count_array(2),count_array(3),count_array(4),count_array(5)), stat=err)
+    call check_r( nf90_inq_varid(ncid, varname, varid) )
+    call check_r( nf90_get_var(ncid, varid, vars, start = istr, count = count_array))
+    if (nf90_get_att(ncid, varid, 'scale_factor',scale_factor) == 0 ) then
+       call check_r( nf90_get_att(ncid, varid, 'scale_factor',scale_factor))
+    else
+       scale_factor=1.0
+    end if
+    if (nf90_get_att(ncid, varid, 'add_offset',add_offset) == 0 ) then
+       call check_r( nf90_get_att(ncid, varid, 'add_offset',add_offset))
+    else
+       add_offset = 0.0
+    end if
+    vars = vars * scale_factor + add_offset
+    ! close file
+    call check_r(nf90_close(ncid))
+  end subroutine get_variable_5D_wr_i
+  subroutine get_variable_5D_wr_f(fname,varname,istr,iend,vars)
     use netcdf
     implicit none
     integer,parameter :: idx=4,maxlen=400,ndim=5
     character(len=*),  intent(in) :: fname,varname
-    integer,intent(in) :: istr_1,iend_1
-    integer,intent(in) :: istr_2,iend_2
-    integer,intent(in) :: istr_3,iend_3
-    integer,intent(in) :: istr_4,iend_4
-    integer,intent(in) :: istr_5,iend_5
+    integer,intent(in) :: istr(ndim),iend(ndim)
     real(idx), allocatable, intent(inout) :: vars(:,:,:,:,:)
-    integer :: ndim1,ndim2,ndim3,ndim4,ndim5
-    integer :: ncid
-    integer :: err
+    integer :: ncid,varid,err,i
     real(idx) :: scale_factor,add_offset
-    integer :: varid
-    integer :: start(ndim), count(ndim)
+    integer :: count_array(ndim)
     ! Open files
-    call check_r(nf90_open(trim(fname),nf90_nowrite,ncid))
-    
+    call check_r(nf90_open(trim(fname),nf90_nowrite,ncid))    
     if (allocated(vars) .eqv. .true.) then
        deallocate(vars)
     end if
-    ndim1 = iend_1-istr_1+1
-    ndim2 = iend_2-istr_2+1
-    ndim3 = iend_3-istr_3+1
-    ndim4 = iend_4-istr_4+1
-    ndim5 = iend_5-istr_5+1
+    do i=1,ndim
+       count_array(i)=iend(i)-istr(i)+1
+    end do
 
     ! Allocate data
-    allocate(vars(ndim1,ndim2,ndim3,ndim4,ndim5), stat=err)
-    start = (/istr_1,istr_2,istr_3,istr_4,istr_5/)
-    count = (/ndim1,ndim2,ndim3,ndim4,ndim5/)
+    allocate(vars(count_array(1),count_array(2),count_array(3),count_array(4),count_array(5)), stat=err)
     call check_r( nf90_inq_varid(ncid, varname, varid) )
-    call check_r( nf90_get_var(ncid, varid, vars, start = start, &
-         count = count) )
+    call check_r( nf90_get_var(ncid, varid, vars, start = istr, count = count_array))
     if (nf90_get_att(ncid, varid, 'scale_factor',scale_factor) == 0 ) then
        call check_r( nf90_get_att(ncid, varid, 'scale_factor',scale_factor))
     else
@@ -1690,46 +885,32 @@ contains
        add_offset = 0.0
     end if
     vars = vars * scale_factor + add_offset
-    ! ! close file
+    ! close file
     call check_r(nf90_close(ncid))
-  end subroutine get_variable_5D_wr
-  
-  subroutine dget_variable_5D_wr(fname,varname,istr_1,iend_1,istr_2,iend_2,istr_3,iend_3,istr_4,iend_4,istr_5,iend_5,vars)
+  end subroutine get_variable_5D_wr_f
+  subroutine get_variable_5D_wr_d(fname,varname,istr,iend,vars)
     use netcdf
     implicit none
     integer,parameter :: idx=8,maxlen=400,ndim=5
     character(len=*),  intent(in) :: fname,varname
-    integer,intent(in) :: istr_1,iend_1
-    integer,intent(in) :: istr_2,iend_2
-    integer,intent(in) :: istr_3,iend_3
-    integer,intent(in) :: istr_4,iend_4
-    integer,intent(in) :: istr_5,iend_5
+    integer,intent(in) :: istr(ndim),iend(ndim)
     real(idx), allocatable, intent(inout) :: vars(:,:,:,:,:)
-    integer :: ndim1,ndim2,ndim3,ndim4,ndim5
-    integer :: ncid
-    integer :: err
+    integer :: ncid,varid,err,i
     real(idx) :: scale_factor,add_offset
-    integer :: varid
-    integer :: start(ndim), count(ndim)
+    integer :: count_array(ndim)
     ! Open files
-    call check_r(nf90_open(trim(fname),nf90_nowrite,ncid))
-    
+    call check_r(nf90_open(trim(fname),nf90_nowrite,ncid))    
     if (allocated(vars) .eqv. .true.) then
        deallocate(vars)
     end if
-    ndim1 = iend_1-istr_1+1
-    ndim2 = iend_2-istr_2+1
-    ndim3 = iend_3-istr_3+1
-    ndim4 = iend_4-istr_4+1
-    ndim5 = iend_5-istr_5+1
+    do i=1,ndim
+       count_array(i)=iend(i)-istr(i)+1
+    end do
 
     ! Allocate data
-    allocate(vars(ndim1,ndim2,ndim3,ndim4,ndim5), stat=err)
-    start = (/istr_1,istr_2,istr_3,istr_4,istr_5/)
-    count = (/ndim1,ndim2,ndim3,ndim4,ndim5/)
+    allocate(vars(count_array(1),count_array(2),count_array(3),count_array(4),count_array(5)), stat=err)
     call check_r( nf90_inq_varid(ncid, varname, varid) )
-    call check_r( nf90_get_var(ncid, varid, vars, start = start, &
-         count = count) )
+    call check_r( nf90_get_var(ncid, varid, vars, start = istr, count = count_array))
     if (nf90_get_att(ncid, varid, 'scale_factor',scale_factor) == 0 ) then
        call check_r( nf90_get_att(ncid, varid, 'scale_factor',scale_factor))
     else
@@ -1741,65 +922,118 @@ contains
        add_offset = 0.0
     end if
     vars = vars * scale_factor + add_offset
-    ! ! close file
+    ! close file
     call check_r(nf90_close(ncid))
-  end subroutine dget_variable_5D_wr
+  end subroutine get_variable_5D_wr_d
 
-  subroutine get_attribute_c(fname,varname,varatt,atts)
-    use netcdf
+  subroutine get_variable_TLL_f(fname,varname,lon,lat,time,var,lonname,latname,timename)
     implicit none
-    integer,parameter :: maxlen=400
-    character(len=*),  intent(in) :: fname,varname,varatt
-    character(len=*),  intent(inout) :: atts
-    integer :: ncid
-    integer :: err
-    integer :: varid,dim1id
-    integer :: start(1), count(1)
-    ! Open files
-    call check_r( nf90_open(trim(fname),nf90_nowrite,ncid))
-    call check_r( nf90_inq_varid(ncid, varname, varid) )
-    if ( nf90_get_att(ncid, varid,varatt,atts) == 0 ) then
-       call check_r(nf90_get_att(ncid, varid,varatt,atts))
-    else
-       atts="None"
+    integer,parameter :: idx=4
+    character(len=*),  intent(in) :: fname,varname
+    character(len=*),optional :: lonname,latname,timename
+    real(idx),allocatable,intent(inout)  :: lon(:),lat(:),time(:),var(:,:,:)
+    integer :: nlon,nlat,ntime
+    if(.not. present(lonname) ) then
+       lonname="lon"
     end if
-  end subroutine get_attribute_c
-  subroutine get_attribute_f(fname,varname,varatt,atts)
-    use netcdf
+    if(.not. present(latname) ) then
+       latname="lat"
+    end if
+    if(.not. present(timename) ) then
+       timename="time"
+    end if
+    call get_dimsize(fname,lonname,nlon)
+    call get_dimsize(fname,latname,nlat)
+    call get_dimsize(fname,timename,ntime)
+    allocate(lon(nlon))
+    allocate(lat(nlat))
+    allocate(time(ntime))
+    allocate(var(nlon,nlat,ntime))
+    call get_variable(fname,varname,(/1,1,1/),(/nlon,nlat,ntime/),var)
+  end subroutine get_variable_TLL_f
+  subroutine get_variable_TLL_d(fname,varname,lon,lat,time,var,lonname,latname,timename)
     implicit none
-    integer,parameter :: idx=4,maxlen=400
-    character(len=*),  intent(in) :: fname,varname,varatt
-    real(idx),  intent(inout) :: atts
-    integer :: ncid
-    integer :: err
-    integer :: varid,dim1id
-    integer :: start(1), count(1)
-    ! Open files
-    call check_r( nf90_open(trim(fname),nf90_nowrite,ncid))
-    call check_r( nf90_inq_varid(ncid, varname, varid) )
-    if ( nf90_get_att(ncid, varid,varatt,atts) == 0 ) then
-       call check_r(nf90_get_att(ncid, varid,varatt,atts))
-    else
-       atts="None"
+    integer,parameter :: idx=8
+    character(len=*),  intent(in) :: fname,varname
+    character(len=*),optional :: lonname,latname,timename
+    real(idx),allocatable,intent(inout) :: lon(:),lat(:),time(:),var(:,:,:)
+    integer :: nlon,nlat,ntime
+    if(.not. present(lonname) ) then
+       lonname="lon"
     end if
-  end subroutine get_attribute_f
-  subroutine get_attribute_d(fname,varname,varatt,atts)
-    use netcdf
+    if(.not. present(latname) ) then
+       latname="lat"
+    end if
+    if(.not. present(timename) ) then
+       timename="time"
+    end if
+    call get_dimsize(fname,lonname,nlon)
+    call get_dimsize(fname,latname,nlat)
+    call get_dimsize(fname,timename,ntime)
+    allocate(lon(nlon))
+    allocate(lat(nlat))
+    allocate(time(ntime))
+    allocate(var(nlon,nlat,ntime))
+    call get_variable(fname,varname,(/1,1,1/),(/nlon,nlat,ntime/),var)
+  end subroutine get_variable_TLL_d
+  subroutine get_variable_TLLL_f(fname,varname,lon,lat,lev,time,var,lonname,latname,levname,timename)
     implicit none
-    integer,parameter :: idx=8,maxlen=400
-    character(len=*),  intent(in) :: fname,varname,varatt
-    real(idx),  intent(inout) :: atts
-    integer :: ncid
-    integer :: err
-    integer :: varid,dim1id
-    integer :: start(1), count(1)
-    ! Open files
-    call check_r( nf90_open(trim(fname),nf90_nowrite,ncid))
-    call check_r( nf90_inq_varid(ncid, varname, varid) )
-    if ( nf90_get_att(ncid, varid,varatt,atts) == 0 ) then
-       call check_r(nf90_get_att(ncid, varid,varatt,atts))
-    else
-       atts="None"
+    integer,parameter :: idx=4
+    character(len=*),  intent(in) :: fname,varname
+    character(len=*),optional :: lonname,latname,levname,timename
+    real(idx),allocatable,intent(inout) :: lon(:),lat(:),lev(:),time(:),var(:,:,:,:)
+    integer :: nlon,nlat,nlev,ntime
+    if(.not. present(lonname) ) then
+       lonname="lon"
     end if
-  end subroutine get_attribute_d
+    if(.not. present(latname) ) then
+       latname="lat"
+    end if
+    if(.not. present(levname) ) then
+       levname="lev"
+    end if
+    if(.not. present(timename) ) then
+       timename="time"
+    end if
+    call get_dimsize(fname,lonname,nlon)
+    call get_dimsize(fname,latname,nlat)
+    call get_dimsize(fname,levname,nlev)
+    call get_dimsize(fname,timename,ntime)
+    allocate(lon(nlon))
+    allocate(lat(nlat))
+    allocate(lev(nlev))
+    allocate(time(ntime))
+    allocate(var(nlon,nlat,nlev,ntime))
+    call get_variable(fname,varname,(/1,1,1,1/),(/nlon,nlat,nlev,ntime/),var)
+  end subroutine get_variable_TLLL_f
+  subroutine get_variable_TLLL_d(fname,varname,lon,lat,lev,time,var,lonname,latname,levname,timename)
+    implicit none
+    integer,parameter :: idx=8
+    character(len=*),  intent(in) :: fname,varname
+    character(len=*),optional :: lonname,latname,levname,timename
+    real(idx),allocatable,intent(inout) :: lon(:),lat(:),lev(:),time(:),var(:,:,:,:)
+    integer :: nlon,nlat,nlev,ntime
+    if(.not. present(lonname) ) then
+       lonname="lon"
+    end if
+    if(.not. present(latname) ) then
+       latname="lat"
+    end if
+    if(.not. present(levname) ) then
+       levname="lev"
+    end if
+    if(.not. present(timename) ) then
+       timename="time"
+    end if
+    call get_dimsize(fname,lonname,nlon)
+    call get_dimsize(fname,latname,nlat)
+    call get_dimsize(fname,levname,nlev)
+    call get_dimsize(fname,timename,ntime)
+    allocate(lon(nlon))
+    allocate(lat(nlat))
+    allocate(lev(nlev))
+    allocate(time(ntime))
+    allocate(var(nlon,nlat,nlev,ntime))
+    call get_variable(fname,varname,(/1,1,1,1/),(/nlon,nlat,nlev,ntime/),var)
+  end subroutine get_variable_TLLL_d
 end module ncdf_read

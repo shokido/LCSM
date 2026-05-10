@@ -1,8 +1,7 @@
-program decomp_mode_4d
+program get_vmode_TLLL
   use ncdf_read
   use ncdf_write
   implicit none
-  ! ifort  -o exec_decomp_mode_4d.out decomp_mode_4d.f90 $FPATH_FORT $LPATH_FORT -lncdf_read  -lncdf_write -lnetcdf -lnetcdff -fpp -llapack -llapsub
   integer,parameter :: idx=8,maxlen=400
   integer :: nlon_in,nlat_in,nz_in,ntime_in
   real(idx),allocatable :: lon_in(:),lat_in(:),lev_in(:),time_in(:),pdens_in(:,:,:,:)
@@ -29,30 +28,32 @@ program decomp_mode_4d
   namelist/params/nz,H,lambda
   namelist/modes/nmode
   namelist/fnames/fname_pdens,varname_lon,varname_lat,varname_lev,varname_time,varname_pdens,fname_out
-  open(10,file="filename_decomp_mode_4d.nml",status="old")
-  read(10,nml=params)
+  read(5,nml=params)
   ! Allocate neccesarry arrays
   allocate(s_psi(nz+1)); allocate(lev_psi(nz+1))
   allocate(lev_phi(nz)); allocate(lev_bvf(nz-1))
   allocate(pdens(nz)) ; allocate(bvf(nz-1))
   allocate(lev_psi_new(nz+1));  allocate(lev_phi_new(nz))
-  read(10,nml=modes)
+  read(5,nml=modes)
   allocate(mode_out(nmode)); allocate(cn(nmode))
   allocate(bn(nmode)) ; allocate(hn(nmode))
   allocate(phi_tmp(nz,nmode))
   allocate(phidz_tmp(nz+1,nmode))
   allocate(psi_w_tmp(nz+1,nmode))
-  read(10,nml=fnames)
-  close(10)
+  read(5,nml=fnames)
   
   ! Read netcdf file
   ! Pdens
-  call get_variable(fname_pdens,varname_lon,varname_lon,nlon_in,lon_in)
+  call get_dimsize(fname_pdens,varname_lon,nlon_in)
+  call get_variable(fname_pdens,varname_lon,(/1/),(/nlon_in/),lon_in)
   call get_attribute(fname_pdens,varname_lon,"units",lon_units)
-  call get_variable(fname_pdens,varname_lat,varname_lat,nlat_in,lat_in)
+  call get_dimsize(fname_pdens,varname_lat,nlat_in)
+  call get_variable(fname_pdens,varname_lat,(/1/),(/nlat_in/),lat_in)
   call get_attribute(fname_pdens,varname_lat,"units",lat_units)
-  call get_variable(fname_pdens,varname_lev,varname_lev,nz_in,lev_in)
-  call get_variable(fname_pdens,varname_time,varname_time,ntime_in,time_in)
+  call get_dimsize(fname_pdens,varname_lev,nz_in)
+  call get_variable(fname_pdens,varname_lev,(/1/),(/nz_in/),lev_in)
+  call get_dimsize(fname_pdens,varname_time,ntime_in)
+  call get_variable(fname_pdens,varname_time,(/1/),(/ntime_in/),time_in)
   call get_attribute(fname_pdens,varname_time,"units",time_units)
   allocate(pdens_in(nlon_in,nlat_in,nz_in,1))
   ! Prepare common vertical grid
@@ -82,20 +83,29 @@ program decomp_mode_4d
   end do
   lev_units="m"
   mode_units=""
+
   call get_attribute(fname_pdens,varname_pdens,"missing_value",missing_value)
+  write(*,*) nlon_in,nlat_in,nz,nmode,ntime_in
   call writenet_pre(trim(fname_out),nlon_in,nlat_in,nz,nmode,ntime_in,&
        & "lon","lat","lev","mode","time",&
        & lon_units,lat_units,lev_units,mode_units,time_units,lon_in,lat_in,lev_out,mode_out,time_in)
+  write(*,*) nlon_in,nlat_in,nz,nmode,ntime_in,"a"
   call writenet_dv(trim(fname_out),"lon","lat","mode","time",1,(/"cn"/),(/"m/s"/),missing_value)
+  write(*,*) "dv"
   call writenet_dv(trim(fname_out),"lon","lat","mode","time",2,(/"ohn","obn"/),(/"1/m","1/m"/),missing_value)
   call writenet_dv(trim(fname_out),"lon","lat","lev","time",1,(/"bvf"/),(/"1/s^2"/),missing_value)
-  call writenet_dv(trim(fname_out),"lon","lat","lev","mode","time",3,(/"phi","phidz","psi_w"/),&
-       & (/"m","m","m"/),missing_value)
+  call writenet_dv(trim(fname_out),"lon","lat","lev","mode","time",1,(/"phi"/),&
+       & (/""/),missing_value)
+  call writenet_dv(trim(fname_out),"lon","lat","lev","mode","time",1,(/"phidz"/),&
+       & (/""/),missing_value)
+  call writenet_dv(trim(fname_out),"lon","lat","lev","mode","time",1,(/"psi_w"/),&
+       & (/""/),missing_value)
 
   write(*,*) "lon=",nlon_in,"lat=",nlat_in
 
   do itime = 1,ntime_in
-     call get_variable(fname_pdens,varname_pdens,1,nlon_in,1,nlat_in,1,nz_in,itime,itime,pdens_in)
+!     call get_variable(fname_pdens,varname_pdens,1,nlon_in,1,nlat_in,1,nz_in,itime,itime,pdens_in)
+     call get_variable(fname_pdens,varname_pdens,(/1,1,1,itime/),(/nlon_in,nlat_in,nz_in,itime/),pdens_in)
      do ilat =1,nlat_in
         write(*,*) "ilat=",ilat
         do ilon = 1,nlon_in
@@ -136,13 +146,13 @@ program decomp_mode_4d
            end if
         end do
      end do
-     call writenet_wv(trim(fname_out),"cn",1,nlon_in,1,nlat_in,1,nmode,itime,itime,cn_out)
-     call writenet_wv(trim(fname_out),"obn",1,nlon_in,1,nlat_in,1,nmode,itime,itime,bn_out)
-     call writenet_wv(trim(fname_out),"ohn",1,nlon_in,1,nlat_in,1,nmode,itime,itime,hn_out)
-     call writenet_wv(trim(fname_out),"bvf",1,nlon_in,1,nlat_in,1,nz_out,itime,itime,bvf_out)
-     call writenet_wv(trim(fname_out),"phi",1,nlon_in,1,nlat_in,1,nz_out,1,nmode,itime,itime,phi_out)
-     call writenet_wv(trim(fname_out),"phidz",1,nlon_in,1,nlat_in,1,nz_out,1,nmode,itime,itime,phidz_out)
-     call writenet_wv(trim(fname_out),"psi_w",1,nlon_in,1,nlat_in,1,nz_out,1,nmode,itime,itime,psi_w_out)
+     call writenet_wv(trim(fname_out),"cn",(/1,1,1,itime/),(/nlon_in,nlat_in,nmode,itime/),cn_out)
+     call writenet_wv(trim(fname_out),"obn",(/1,1,1,itime/),(/nlon_in,nlat_in,nmode,itime/),bn_out)
+     call writenet_wv(trim(fname_out),"ohn",(/1,1,1,itime/),(/nlon_in,nlat_in,nmode,itime/),hn_out)
+     call writenet_wv(trim(fname_out),"bvf",(/1,1,1,itime/),(/nlon_in,nlat_in,nz_out,itime/),bvf_out)
+     call writenet_wv(trim(fname_out),"phi",(/1,1,1,1,itime/),(/nlon_in,nlat_in,nz_out,nmode,itime/),phi_out)
+     call writenet_wv(trim(fname_out),"phidz",(/1,1,1,1,itime/),(/nlon_in,nlat_in,nz_out,nmode,itime/),phidz_out)
+     call writenet_wv(trim(fname_out),"psi_w",(/1,1,1,1,itime/),(/nlon_in,nlat_in,nz_out,nmode,itime/),psi_w_out)
   end do
 
   deallocate(mode_out); deallocate(cn); deallocate(bn) ; deallocate(hn)
@@ -401,4 +411,4 @@ contains
        bn(im)=Hn(im)*tmp1
     end do
   end subroutine cal_vm_raw
-end program decomp_mode_4d
+end program get_vmode_TLLL

@@ -1,6 +1,5 @@
-program get_pdens_2d
+program get_pdens_LCSMgrid
   ! Get density
-  ! ifort -o exec_get_pdens_2d.out get_pdens_2d.f90 $FPATH_FORT $LPATH_FORT -lnetcdf -lnetcdff -lncdf_read -lncdf_write
   use ncdf_read
   use ncdf_write
   implicit none
@@ -22,23 +21,25 @@ program get_pdens_2d
   namelist/temp/fname_temp,varname_temp
   namelist/salt/fname_salt,varname_salt
   namelist/pdens/fname_dens
-  open(10,file='filename_get_pdens_lomgrid.nml',status='old')
-  read(10,fflag)
-  read(10,temp)
-  read(10,salt)
-  read(10,pdens)
-  close(10)
-  call get_variable(trim(fname_temp),"x","y",lonname,nlon,nlat,tmp_2d)
+  read(5,fflag)
+  read(5,temp)
+  read(5,salt)
+  read(5,pdens)
+  call get_dimsize(trim(fname_temp),"x",nlon)
+  call get_dimsize(trim(fname_temp),"y",nlat)
+  call get_dimsize(trim(fname_temp),levname,nlev)
+  call get_dimsize(trim(fname_temp),timename,ntime)
+  call get_variable(trim(fname_temp),lonname,(/1,1/),(/nlon,nlat/),tmp_2d)
   allocate(lon(nlon))
   lon(1:nlon)=tmp_2d(1:nlon,1)
   allocate(lat(nlat))
-  call get_variable(trim(fname_temp),"x","y",latname,nlon,nlat,tmp_2d)
+  call get_variable(trim(fname_temp),latname,(/1,1/),(/nlon,nlat/),tmp_2d)
   lat(1:nlat)=tmp_2d(1,1:nlat)
   call get_attribute(trim(fname_temp),lonname,"units",lon_unit)
   call get_attribute(trim(fname_temp),latname,"units",lat_unit)
-  call get_variable(trim(fname_temp),levname,levname,nlev,lev)
+  call get_variable(trim(fname_temp),levname,(/1/),(/nlev/),lev)
   call get_attribute(trim(fname_temp),levname,"units",lev_unit)
-  call get_variable(trim(fname_temp),timename,timename,ntime,time)
+  call get_variable(trim(fname_temp),timename,(/1/),(/ntime/),time)
   call get_attribute(trim(fname_temp),timename,"units",time_unit)
   allocate(temp_in(1:nlon,1:nlat,1:nlev,1:1))
   allocate(salt_in(1:nlon,1:nlat,1:nlev,1:1))
@@ -51,8 +52,8 @@ program get_pdens_2d
   write(*,*) "Finish definition"
   do itime = 1,ntime
      write(*,*) itime
-     call get_variable(trim(fname_temp),varname_temp,1,nlon,1,nlat,1,nlev,itime,itime,temp_in)
-     call get_variable(trim(fname_salt),varname_salt,1,nlon,1,nlat,1,nlev,itime,itime,salt_in)  
+     call get_variable(trim(fname_temp),varname_temp,(/1,1,1,itime/),(/nlon,nlat,nlev,itime/),temp_in)
+     call get_variable(trim(fname_salt),varname_salt,(/1,1,1,itime/),(/nlon,nlat,nlev,itime/),salt_in)  
      do ilev = 1,nlev
         do ilat = 1,nlat
            do ilon = 1,nlon
@@ -64,7 +65,8 @@ program get_pdens_2d
            end do
         end do
      end do
-     call writenet_wv(trim(fname_dens),"dens",1,nlon,1,nlat,1,nlev,itime,itime,dens)
+!     call writenet_wv(trim(fname_dens),"dens",1,nlon,1,nlat,1,nlev,itime,itime,dens)
+     call writenet_wv(trim(fname_dens),"dens",(/1,1,1,itime/),(/nlon,nlat,nlev,itime/),dens)
 
   end do
   deallocate(lon) ; deallocate(lat) ; deallocate(lev) ;deallocate(time)
@@ -112,4 +114,4 @@ contains
          & p1d * p + p2t3d * (p**2_idx)* (t**3_idx) + p3t1d * (p**3_idx)*t
     dens = P1 / P2
   end function cal_dens_sptp
-end program get_pdens_2d
+end program get_pdens_LCSMgrid
