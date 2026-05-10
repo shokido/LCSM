@@ -322,6 +322,10 @@ contains
        do iy = 1,ny
           u_next(1,iy) = u_next(2,iy)
        end do
+    case ("Per","PER","per") ! Periodic boundary condition
+       do iy = 1,ny
+          u_next(1,iy) = u_next(nx,iy)
+       end do
     end select
     !=================================
     ! Eastern boundary condition
@@ -334,6 +338,10 @@ contains
     case ("Gra","GRA","gra") ! Gradient boundary condition
        do iy = 1,ny
           u_next(nx+1,iy) = u_next(nx,iy)
+       end do
+    case ("Per","PER","per") ! Periodic boundary condition
+       do iy = 1,ny
+          u_next(nx+1,iy) = u_next(2,iy)
        end do
     end select
     !=================================
@@ -348,6 +356,10 @@ contains
        do ix = 2,nx
           u_next(ix,0) = u_next(ix,1)
        end do
+    case ("Per","PER","per") ! Periodic boundary condition
+       do ix = 2,nx
+          u_next(ix,0) = u_next(ix,ny-1)
+       end do
     end select
     !=================================
     ! Northern boundary condition
@@ -360,6 +372,10 @@ contains
     case ("Gra","GRA","gra") ! Gradient boundary
        do ix = 2,nx
           u_next(ix,ny+1) = u_next(ix,ny)
+       end do
+    case ("Per","PER","per") ! Periodic boundary condition
+       do ix = 2,nx
+          u_next(ix,ny+1) = u_next(ix,2)
        end do
     end select
   end subroutine set_bc_u
@@ -386,6 +402,10 @@ contains
        do iy = 2,ny
           v_next(0,iy) = v_next(1,iy)
        end do
+    case ("Per","PER","per") ! Periodic boundary condition
+       do iy = 2,ny
+          v_next(0,iy) = v_next(nx-1,iy)
+       end do
     end select
     !=================================
     ! Eastern boundary condition
@@ -398,6 +418,10 @@ contains
     case ("Gra","GRA","gra") ! Gradient boundary
        do iy = 2,ny
           v_next(nx+1,iy) = v_next(nx,iy)
+       end do
+    case ("Per","PER","per") ! Periodic boundary condition
+       do iy = 2,ny
+          v_next(nx+1,iy) = v_next(2,iy)
        end do
     end select
     !=================================
@@ -412,6 +436,10 @@ contains
        do ix = 1,nx
           v_next(ix,1) = v_next(ix,2)
        end do
+    case ("Per","PER","per") ! Periodic boundary condition
+       do ix = 1,nx
+          v_next(ix,1) = v_next(ix,ny)
+       end do
     end select
     !=================================
     ! Northern boundary condition
@@ -424,6 +452,10 @@ contains
     case ("Gra","GRA","gra") ! Gradient boundary
        do ix = 1,nx
           v_next(ix,ny+1) = v_next(ix,ny)
+       end do
+    case ("Per","PER","per") ! Periodic boundary condition
+       do ix = 1,nx
+          v_next(ix,ny+1) = v_next(ix,2)
        end do
     end select
   end subroutine set_bc_v
@@ -445,6 +477,10 @@ contains
        do iy = 1,ny
           p_next(0,iy) = p_next(1,iy)
        end do
+    case ("Per","PER","per") ! Periodic boundary condition
+       do iy = 1,ny
+          p_next(0,iy) = p_next(nx-1,iy)
+       end do
     end select
     !=================================
     ! Eastern boundary condition
@@ -457,6 +493,10 @@ contains
     case ("Gra","GRA","gra") ! Gradient boundary
        do iy = 1,ny
           p_next(nx+1,iy) = p_next(nx,iy)
+       end do
+    case ("Per","PER","per") ! Periodic boundary condition
+       do iy = 1,ny
+          p_next(nx+1,iy) = p_next(2,iy)
        end do
     end select
     !=================================
@@ -471,6 +511,10 @@ contains
        do ix = 1,nx
           p_next(ix,0) = p_next(ix,1)
        end do
+    case ("Per","PER","per") ! Periodic boundary condition
+       do ix = 1,nx
+          p_next(ix,0) = p_next(ix,ny-1)
+       end do
     end select
     !=================================
     ! Northern boundary condition
@@ -483,6 +527,10 @@ contains
     case ("Gra","GRA","gra") ! Gradient boundary
        do ix = 1,nx
           p_next(ix,ny+1) = p_next(ix,ny)
+       end do
+    case ("Per","PER","per") ! Periodic boundary condition
+       do ix = 1,nx
+          p_next(ix,ny+1) = p_next(ix,2)
        end do
     end select
   end subroutine set_bc_p
