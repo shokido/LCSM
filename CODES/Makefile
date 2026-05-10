@@ -37,8 +37,7 @@ MODS  = ncdf_read.mod \
 		mod_io_master.mod \
         run_types.mod \
 	lcsm_array.mod \
-	ocn_dyn.mod  \
-
+	ocn_dyn.mod 
 all: $(TARGET)
 
 

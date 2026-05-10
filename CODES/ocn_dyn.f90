@@ -104,7 +104,7 @@ contains
           !=================================
           ! p equation
           !=================================
-          drag_p = -1.0_idx * p(ix,iy) * (oset%A / (cn**2))*damp_p(ix,iy)
+          drag_p = -1.0_idx * p(ix,iy) * (oset%A / (cn**2)+damp_p(ix,iy))
           dudx=-1.0_idx*(cn**2)*(u(ix+1,iy)-u(ix,iy)) / (x_u(ix+1)-x_u(ix))
           dvdy=-1.0_idx*(cn**2)*(v(ix,iy+1)-v(ix,iy)) / (y_v(iy+1)-y_v(iy))
           rhs_p=drag_p + dudx + dvdy
@@ -139,7 +139,7 @@ contains
           !=================================
           ! U equation
           !=================================
-          drag_u = -1.0_idx * u(ix,iy) * (oset%A / (cn**2))*damp_u(ix,iy)
+          drag_u = -1.0_idx * u(ix,iy) * (oset%A / (cn**2)+damp_u(ix,iy))
           corx= 0.125_idx * ((f(ix,iy)+f(ix,iy+1))*(v(ix,iy+1)+v(ix-1,iy+1)) + &
                & (f(ix,iy-1)+f(ix,iy)) * (v(ix,iy)+v(ix-1,iy)))                 ! Coriolis force
           !corx= 0.25_idx * f(ix,iy) * (v(ix,iy+1)+v(ix-1,iy+1)+v(ix,iy)+v(ix-1,iy)) ! Coriolis force (ENS conserve) 
@@ -185,7 +185,7 @@ contains
           !=================================
           ! V equation
           !=================================
-          drag_v = -1.0_idx * v(ix,iy) * (oset%A / (cn**2))*damp_v(ix,iy)
+          drag_v = -1.0_idx * v(ix,iy) * (oset%A / (cn**2)+damp_v(ix,iy))
           cory = -0.125_idx * (f(ix,iy)+f(ix,iy-1))*(u(ix,iy-1)+u(ix+1,iy-1)+u(ix,iy)+u(ix+1,iy)) ! Coriolis force(ENS conserve)
           !cory = -0.25_idx *  (f(ix,iy) * u(ix,iy)+ f(ix,iy)* u(ix+1,iy)+f(ix,iy-1) * u(ix,iy-1)+ f(ix,iy-1)* u(ix+1,iy-1))! Coriolis force (ENG conserve) !
           pgrdy=-1.0_idx*(p(ix,iy)-p(ix,iy-1)) / (y_rho(iy)-y_rho(iy-1)) ! pressure gradient force
@@ -304,7 +304,6 @@ contains
     real(idx),intent(in) :: slip_ind
     real(idx) :: gamma2
     integer :: ix,iy
-    real(idx) :: mu,mux,muy
     real(idx) :: tiny=1.0e-20
     gamma2 = 1.0_idx - 2.0_idx*slip_ind ! gamma2=1 for slip_ind=0 (du/dx=0),gamma2=-1 for slip_ind=2 (u=0)
     !=================================
@@ -369,7 +368,6 @@ contains
     real(idx),intent(in) :: slip_ind
     real(idx) :: gamma2
     integer :: ix,iy
-    real(idx) :: mu,mux,muy
     real(idx) :: tiny=1.0e-20
     gamma2 = 1.0_idx - 2.0_idx*slip_ind ! gamma2=1 for slip_ind=0 (du/dx=0),gamma2=-1 for slip_ind=2 (u=0)
     !=================================
@@ -431,7 +429,6 @@ contains
     real(idx),intent(inout) :: p(0:nx+1,0:ny+1),p_past(0:nx+1,0:ny+1),p_next(0:nx+1,0:ny+1)
     character(len=*),intent(in) :: wbc_flag,ebc_flag,nbc_flag,sbc_flag
     integer :: ix,iy
-    real(idx) :: mu,mux,muy
     !=================================
     ! Western boundary condition
     !=================================

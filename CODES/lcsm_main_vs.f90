@@ -232,9 +232,9 @@ program lcsm_main_vs
              & u(im,1:nx_p+1,0:ny_p+1),v(im,0:nx_p+1,1:ny_p+1),p(im,0:nx_p+1,0:ny_p+1),&
              & v_past(im,0:nx_p+1,1:ny_p+1),v_next(im,0:nx_p+1,1:ny_p+1),cn(im),obn(im,0:nx_p+1,0:ny_p+1),dt,oset)
         ! Apply asselin fiter
-        p(im,0:nx_p+1,0:ny_p+1) = p(im,0:nx_p+1,0:ny_p+1) + 0.5_idx * 0.2_idx * mask_p*(p_next(im,0:nx_p+1,0:ny_p+1) + p_past(im,0:nx_p+1,0:ny_p+1)-2.0_idx*p(im,0:nx_p+1,0:ny_p+1))
-        u(im,1:nx_p+1,0:ny_p+1) = u(im,1:nx_p+1,0:ny_p+1) + 0.5_idx * 0.2_idx * mask_u*(u_next(im,1:nx_p+1,0:ny_p+1) + u_past(im,1:nx_p+1,0:ny_p+1)-2.0_idx*u(im,1:nx_p+1,0:ny_p+1))
-        v(im,0:nx_p+1,1:ny_p+1) = v(im,0:nx_p+1,1:ny_p+1) + 0.5_idx * 0.2_idx * mask_v*(v_next(im,0:nx_p+1,1:ny_p+1) + v_past(im,0:nx_p+1,1:ny_p+1)-2.0_idx*v(im,0:nx_p+1,1:ny_p+1))
+        call asselin_filter_p(nx_p,ny_p,mask_p,p(im,0:nx_p+1,0:ny_p+1),p_past(im,0:nx_p+1,0:ny_p+1),p_next(im,0:nx_p+1,0:ny_p+1))
+        call asselin_filter_u(nx_p,ny_p,mask_u,u(im,1:nx_p+1,0:ny_p+1),u_past(im,1:nx_p+1,0:ny_p+1),u_next(im,1:nx_p+1,0:ny_p+1))
+        call asselin_filter_v(nx_p,ny_p,mask_v,v(im,0:nx_p+1,1:ny_p+1),v_past(im,0:nx_p+1,1:ny_p+1),v_next(im,0:nx_p+1,1:ny_p+1))
         !
         ! Apply boundary conditions
         call set_bc_p(nx_p,ny_p,p(im,0:nx_p+1,0:ny_p+1),p_past(im,0:nx_p+1,0:ny_p+1),p_next(im,0:nx_p+1,0:ny_p+1),oset%wbc_p,oset%ebc_p,oset%nbc_p,oset%sbc_p)
