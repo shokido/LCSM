@@ -53,4 +53,15 @@ module run_types
      character(1) :: Lcycle='F'
      real(idx) :: Tcycle=365.0_idx
   end type TLL_dta
+  type :: TLLL_dta
+     integer :: ind1,ind2,ntime
+     real(idx) :: wgt1,wgt2
+     type(vector_1d) :: time
+     type(vector_1d) :: time_cyc 
+     type(vector_3d) :: data_mod
+     type(vector_3d) :: data_now
+     type(vector_4d) :: data
+     character(1) :: Lcycle='F'
+     real(idx) :: Tcycle=365.0_idx
+  end type TLLL_dta
 end module run_types

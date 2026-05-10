@@ -8,14 +8,11 @@ program lcsm_main_vs
   use ncdf_read
   use ncdf_write
   ! Input and output
-!  use io_param
-  use input_files
   use mod_io_master
   use mod_grid
   use mod_avg
   use mod_hist
   use mod_rst
-  use mod_strf
   ! Time routines
   use calendar_sub
   use run_types
@@ -27,7 +24,7 @@ program lcsm_main_vs
   integer :: nx_p,ny_p,nm
   real(idx) :: total_time
   integer :: ntime
-  real(idx) :: time_int,time_int_uw,time_int_vw,time_int_bn
+  real(idx) :: time_int
   integer :: iavg_count
   real(idx) :: tmp
   character(maxlen) :: fname_in_grid
@@ -59,9 +56,12 @@ program lcsm_main_vs
   real(idx) :: Tcycle_ocn_tauy
   ! Stratification file
   character(maxlen) :: fname_in_cn
-  character(maxlen) :: fname_in_bn,varname_bn
-  character(1) :: Lcycle_bn
-  real(idx) :: Tcycle_bn
+  type(TLLL_dta) :: ocn_obn_dta
+  integer :: nfile_ocn_obn
+  character(len=maxlen),allocatable :: fnames_ocn_obn(:)
+  character(len=maxlen) :: timename_ocn_obn,varname_ocn_obn
+  character(1) :: Lcycle_ocn_obn
+  real(idx) :: Tcycle_ocn_obn
   ! Namelist
   namelist/date/dt,start_yymmdd,start_hhmmss,end_yymmdd,end_hhmmss
   namelist/grid/fname_in_grid
@@ -71,12 +71,13 @@ program lcsm_main_vs
   namelist/output_avg/fname_out_avg
   namelist/init/in_rst_flag,fname_in_rst
   namelist/output_rst/out_rst_flag,fname_out_rst
- namelist/taux_param_ocn/nfile_ocn_taux,timename_ocn_taux,varname_ocn_taux,Lcycle_ocn_taux,Tcycle_ocn_taux
+  namelist/taux_param_ocn/nfile_ocn_taux,timename_ocn_taux,varname_ocn_taux,Lcycle_ocn_taux,Tcycle_ocn_taux
   namelist/taux_io_ocn/fnames_ocn_taux
   namelist/tauy_param_ocn/nfile_ocn_tauy,timename_ocn_tauy,varname_ocn_tauy,Lcycle_ocn_tauy,Tcycle_ocn_tauy
   namelist/tauy_io_ocn/fnames_ocn_tauy
   namelist/strf/fname_in_cn
-  namelist/strf/fname_in_bn,varname_bn,Lcycle_bn,Tcycle_bn
+  namelist/obn_param_ocn/nfile_ocn_obn,timename_ocn_obn,varname_ocn_obn,Lcycle_ocn_obn,Tcycle_ocn_obn
+  namelist/obn_io_ocn/fnames_ocn_obn
   namelist/param_ocn/oset
   !$ double precision st, en
   !$ st = omp_get_wtime()
@@ -126,9 +127,6 @@ program lcsm_main_vs
   call read_data_TLL_p(nfile_ocn_tauy,fnames_ocn_tauy,timename_ocn_tauy,varname_ocn_tauy,&
        & nx_p,ny_p,ocn_tauy_dta,start_yymmdd,start_hhmmss) ! Meridional wind
   ocn_tauy_dta%Lcycle=Lcycle_ocn_tauy;ocn_tauy_dta%Tcycle=Tcycle_ocn_tauy
-
-  !   call read_TLL_p(nx_p,ny_p,fname_in_uw,varname_uw,wind_x,time_uw,start_yymmdd,start_hhmmss)
-!   call read_TLL_p(nx_p,ny_p,fname_in_vw,varname_vw,wind_y,time_vw,start_yymmdd,start_hhmmss)
   allocate(tau_x(0:nx_p+1,0:ny_p+1)) ; allocate(tau_y(0:nx_p+1,0:ny_p+1))
   write(*,*) "**********************************"
   write(*,*) "Finish reading wind data"
@@ -138,16 +136,20 @@ program lcsm_main_vs
   !===============================================
   read(5,nml=strf)
   call get_dimsize(fname_in_cn,"mode",nm); allocate(cn(1:nm))
-  call get_var_1D(fname_in_cn,"cn",cn(1:nm))
+  call get_variable(trim(fname_in_cn),"cn",(/1/),(/nm/),cn)
   write(*,*) "**************************************"
   write(*,*) "Finish reading cn data"
   write(*,*) "VM file name= "//trim(fname_in_cn)
   write(*,*) "*************************************"
-  call read_vm_data_nd(nx_p,ny_p,nm,fname_in_bn,varname_bn,bn_in,time_bn,start_yymmdd,start_hhmmss)
-  allocate(bn(1:nm,0:nx_p+1,0:ny_p+1))
+  read(5,obn_param_ocn)
+  allocate(fnames_ocn_obn(nfile_ocn_obn))
+  read(5,obn_io_ocn)
+  call read_data_TLLL_p(nfile_ocn_obn,fnames_ocn_obn,timename_ocn_obn,varname_ocn_obn,&
+       & nx_p,ny_p,nm,ocn_obn_dta,start_yymmdd,start_hhmmss) ! obn
+  ocn_obn_dta%Lcycle=Lcycle_ocn_obn;ocn_obn_dta%Tcycle=Tcycle_ocn_obn
+  allocate(obn(1:nm,0:nx_p+1,0:ny_p+1))
   write(*,*) "**********************************"
-  write(*,*) "Finish reading bn data"
-  write(*,*) "VM file name= "//trim(fname_in_bn)
+  write(*,*) "Finish reading obn data"
   write(*,*) "**********************************"
   !===============================================
   ! Initialize oceanic array
@@ -201,57 +203,34 @@ program lcsm_main_vs
   write(*,*) "Total vertical modes=",nm
   write(*,*) "Number of timestep=",ntime
   do itime = 1,ntime
-      iavg_count = iavg_count + 1
-      time_int=dt*itime*sec_to_day
+     iavg_count = iavg_count + 1
+     time_int=dt*itime*sec_to_day
+     ! Zonal wind stress
      call get_data_TLL_p(time_int,start_yymmdd,start_hhmmss,nx_p,ny_p,ocn_taux_dta)
-     call get_data_TLL_p(time_int,start_yymmdd,start_hhmmss,nx_p,ny_p,ocn_tauy_dta)
      tau_x=ocn_taux_dta%data_now%val
+     ! Meridional wind stress
+     call get_data_TLL_p(time_int,start_yymmdd,start_hhmmss,nx_p,ny_p,ocn_tauy_dta)
      tau_y=ocn_tauy_dta%data_now%val
-      !   time_int=dt*itime
-   !   if (Lcycle_uw .eq. "T") then
-   !      time_int_uw=time_int-int(time_int/(Tcycle_uw*60.0*60.0*24.0))*Tcycle_uw*60.0*60.0*24.0
-   !   else
-   !      time_int_uw=time_int
-   !   end if
-   !   if (Lcycle_vw .eq. "T") then
-   !      time_int_vw=time_int-int(time_int/(Tcycle_vw*60.0*60.0*24.0))*Tcycle_vw*60.0*60.0*24.0
-   !   else
-   !      time_int_vw=time_int
-   !   end if
-   !   if (Lcycle_bn .eq. "T") then
-   !      time_int_bn=time_int-int(time_int/(Tcycle_bn*60.0*60.0*24.0))*Tcycle_bn*60.0*60.0*24.0
-   !   else
-   !      time_int_bn=time_int
-   !   end if
-
-   !   call time_wgt(time_uw,time_int_uw,ind1_uw,ind2_uw,wgt1_uw,wgt2_uw)
-   !   call time_wgt(time_vw,time_int_vw,ind1_vw,ind2_vw,wgt1_vw,wgt2_vw)
-     call time_wgt(time_bn,time_int_bn,ind1_bn,ind2_bn,wgt1_bn,wgt2_bn)
-     !Set wind stress and projection coefficients
-     do ix = 0,nx_p+1
-        do iy = 0,ny_p+1
-         !   tau_x(ix,iy)=set_data(ind1_uw,ind2_uw,wgt1_uw,wgt2_uw,wind_x(ix,iy,:))
-         !   tau_y(ix,iy)=set_data(ind1_vw,ind2_vw,wgt1_vw,wgt2_vw,wind_y(ix,iy,:))
-           do im = 1,nm
-              bn(im,ix,iy)=set_data(ind1_bn,ind2_bn,wgt1_bn,wgt2_bn,bn_in(ix,iy,im,:))
-           end do
-        end do
+     ! Bn
+     call get_data_TLLL_p(time_int,start_yymmdd,start_hhmmss,nx_p,ny_p,nm,ocn_obn_dta)
+     do im = 1,nm
+          obn(im,0:nx_p,0:ny_p)=ocn_obn_dta%data_now%val(0:nx_p,0:ny_p,im)
      end do
-     tau_x_avg=tau_x_avg+tau_x
-     tau_y_avg=tau_y_avg+tau_y
+
+     tau_x_avg=tau_x_avg+tau_x;tau_y_avg=tau_y_avg+tau_y
 
      !$omp parallel private(iy,ix)
      !$omp do 
      do im = 1,nm
         call dyn_shallow_p(nx_p,ny_p,x_p,y_p,x_u,y_u,x_v,y_v,mask_p,damp_p,&
              & u(im,1:nx_p+1,0:ny_p+1),v(im,0:nx_p+1,1:ny_p+1),p(im,0:nx_p+1,0:ny_p+1),&
-             & p_past(im,0:nx_p+1,0:ny_p+1),p_next(im,0:nx_p+1,0:ny_p+1),cn(im),bn(im,0:nx_p+1,0:ny_p+1),dt,oset)
+             & p_past(im,0:nx_p+1,0:ny_p+1),p_next(im,0:nx_p+1,0:ny_p+1),cn(im),obn(im,0:nx_p+1,0:ny_p+1),dt,oset)
         call dyn_shallow_u(nx_p,ny_p,x_p,y_p,x_u,y_u,x_v,y_v,f,mask_u,mask_phi_u,damp_u,nu,tau_x,&
              & u(im,1:nx_p+1,0:ny_p+1),v(im,0:nx_p+1,1:ny_p+1),p(im,0:nx_p+1,0:ny_p+1),&
-             & u_past(im,1:nx_p+1,0:ny_p+1),u_next(im,1:nx_p+1,0:ny_p+1),cn(im),bn(im,0:nx_p+1,0:ny_p+1),dt,oset)
+             & u_past(im,1:nx_p+1,0:ny_p+1),u_next(im,1:nx_p+1,0:ny_p+1),cn(im),obn(im,0:nx_p+1,0:ny_p+1),dt,oset)
         call dyn_shallow_v(nx_p,ny_p,x_p,y_p,x_u,y_u,x_v,y_v,f,mask_v,mask_phi_v,damp_v,nu,tau_y,&
              & u(im,1:nx_p+1,0:ny_p+1),v(im,0:nx_p+1,1:ny_p+1),p(im,0:nx_p+1,0:ny_p+1),&
-             & v_past(im,0:nx_p+1,1:ny_p+1),v_next(im,0:nx_p+1,1:ny_p+1),cn(im),bn(im,0:nx_p+1,0:ny_p+1),dt,oset)
+             & v_past(im,0:nx_p+1,1:ny_p+1),v_next(im,0:nx_p+1,1:ny_p+1),cn(im),obn(im,0:nx_p+1,0:ny_p+1),dt,oset)
         ! Apply asselin fiter
         p(im,0:nx_p+1,0:ny_p+1) = p(im,0:nx_p+1,0:ny_p+1) + 0.5_idx * 0.2_idx * mask_p*(p_next(im,0:nx_p+1,0:ny_p+1) + p_past(im,0:nx_p+1,0:ny_p+1)-2.0_idx*p(im,0:nx_p+1,0:ny_p+1))
         u(im,1:nx_p+1,0:ny_p+1) = u(im,1:nx_p+1,0:ny_p+1) + 0.5_idx * 0.2_idx * mask_u*(u_next(im,1:nx_p+1,0:ny_p+1) + u_past(im,1:nx_p+1,0:ny_p+1)-2.0_idx*u(im,1:nx_p+1,0:ny_p+1))
@@ -327,7 +306,7 @@ program lcsm_main_vs
   deallocate(damp_u) ; deallocate(damp_v); deallocate(damp_p)
   deallocate(nu)
   ! Vertical modes
-  deallocate(cn) ; deallocate(bn)
+  deallocate(cn) ; deallocate(obn)
   ! Time arrays
   deallocate(istep_hist) ; deallocate(istep_avg)
   ! External forcing
