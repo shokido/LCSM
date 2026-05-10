@@ -1,6 +1,5 @@
 module mod_grid
   use run_param
-  use input_files
   use ncdf_read
   implicit none
   private
@@ -62,40 +61,63 @@ contains
     real(idx),allocatable,intent(inout) :: mask_p(:,:)
     real(idx),allocatable,intent(inout) :: damp_p(:,:),damp_u(:,:),damp_v(:,:)
     integer ::ntmp
-    ! Get grid
-    ! Grid generation------------------------------------------------
-    ! p(0:nx+1,0:ny+1)
+    real(idx),allocatable :: v_1d(:)
+    real(idx),allocatable :: v_2d(:,:)
+   ! Get grid
     call get_dimsize(fname,"x_p",ntmp)
     nx=ntmp-2
     call get_dimsize(fname,"y_p",ntmp)
     ny=ntmp-2
-    allocate(x_p(0:nx+1)) ; allocate(y_p(0:ny+1))
-    allocate(x_u(1:nx+1)) ; allocate(y_u(0:ny+1))
-    allocate(x_v(0:nx+1)) ; allocate(y_v(1:ny+1))
-    allocate(lon_p(0:nx+1)) ;  allocate(lat_p(0:ny+1))
-    allocate(lon_u(1:nx+1)) ; allocate(lat_u(0:ny+1))
-    allocate(lon_v(0:nx+1)) ; allocate(lat_v(1:ny+1))
+    allocate(x_p(0:nx+1))
+    call get_variable(fname,"x_p",(/1/),(/nx+2/),v_1d)
+    x_p(0:nx+1)=v_1d(1:nx+2)
+    allocate(y_p(0:ny+1))
+    call get_variable(fname,"y_p",(/1/),(/ny+2/),v_1d)
+    y_p(0:ny+1)=v_1d(1:ny+2)
+    allocate(x_u(1:nx+1)) ; 
+    call get_variable(fname,"x_u",(/1/),(/nx+1/),v_1d)
+    x_u(1:nx+1)=v_1d(1:nx+2)
+    allocate(y_u(0:ny+1))
+    call get_variable(fname,"y_u",(/1/),(/ny+2/),v_1d)
+    y_u(0:ny+1)=v_1d(1:ny+2)
+    allocate(x_v(0:nx+1)) ; 
+    call get_variable(fname,"x_v",(/1/),(/nx+2/),v_1d)
+    x_v(0:nx+1)=v_1d(1:nx+2)
+    allocate(y_v(1:ny+1))
+    call get_variable(fname,"y_v",(/1/),(/ny+1/),v_1d)
+    y_v(1:ny+1)=v_1d(1:ny+1)
+    allocate(lon_p(0:nx+1))
+    call get_variable(fname,"lon_p",(/1/),(/nx+2/),v_1d)
+    lon_p(0:nx+1)=v_1d(1:nx+2)
+    allocate(lat_p(0:ny+1))
+    call get_variable(fname,"lat_p",(/1/),(/ny+2/),v_1d)
+    lat_p(0:ny+1)=v_1d(1:ny+2)
+    allocate(lon_u(1:nx+1)) ; 
+    call get_variable(fname,"lon_u",(/1/),(/nx+1/),v_1d)
+    lon_u(1:nx+1)=v_1d(1:nx+1)
+    allocate(lat_u(0:ny+1))
+    call get_variable(fname,"lat_u",(/1/),(/ny+2/),v_1d)
+    lat_u(0:ny+1)=v_1d(1:ny+2)
+    allocate(lon_v(0:nx+1)) ; 
+    call get_variable(fname,"lon_v",(/1/),(/nx+2/),v_1d)
+    lon_v(0:nx+1)=v_1d(1:nx+2)
+    allocate(lat_v(1:ny+1))
+    call get_variable(fname,"lat_v",(/1/),(/ny+1/),v_1d)
+    lat_v(1:ny+1)=v_1d(1:ny+1)
     allocate(f(0:ny+1))
+    call get_variable(fname,"f",(/1/),(/ny+2/),v_1d)
+    f(0:ny+1)=v_1d(1:ny+2)
     allocate(mask_p(0:nx+1,0:ny+1))
+    call get_variable(fname,"mask_p",(/1,1/),(/nx+2,ny+2/),v_2d)
+    mask_p(0:nx+1,0:ny+1)=v_2d(1:nx+2,1:ny+2)
     allocate(damp_p(0:nx+1,0:ny+1))
+    call get_variable(fname,"damp_p",(/1,1/),(/nx+2,ny+2/),v_2d)
+    damp_p(0:nx+1,0:ny+1)=v_2d(1:nx+2,1:ny+2)
     allocate(damp_u(1:nx+1,0:ny+1))
+    call get_variable(fname,"damp_u",(/1,1/),(/nx+1,ny+2/),v_2d)
+    damp_u(1:nx+1,0:ny+1)=v_2d(1:nx+1,1:ny+2)
     allocate(damp_v(0:nx+1,1:ny+1))
-    call get_var_1D(fname,"x_p",x_p(0:nx+1))
-    call get_var_1D(fname,"y_p",y_p(0:ny+1))
-    call get_var_1D(fname,"x_u",x_u(1:nx+1))
-    call get_var_1D(fname,"y_u",y_u(0:ny+1))
-    call get_var_1D(fname,"x_v",x_v(0:nx+1))
-    call get_var_1D(fname,"y_v",y_v(1:ny+1))
-    call get_var_1D(fname,"lon_p",lon_p(0:nx+1))
-    call get_var_1D(fname,"lat_p",lat_p(0:ny+1))
-    call get_var_1D(fname,"lon_u",lon_u(1:nx+1))
-    call get_var_1D(fname,"lat_u",lat_u(0:ny+1))
-    call get_var_1D(fname,"lon_v",lon_v(0:nx+1))
-    call get_var_1D(fname,"lat_v",lat_v(1:ny+1))
-    call get_var_1D(fname,"f",f(0:ny+1))
-    call get_var_2D(fname,"mask_p",mask_p(0:nx+1,0:ny+1))
-    call get_var_2D(fname,"damp_p",damp_p(0:nx+1,0:ny+1))
-    call get_var_2D(fname,"damp_u",damp_u(1:nx+1,0:ny+1))
-    call get_var_2D(fname,"damp_v",damp_v(0:nx+1,1:ny+1))
+    call get_variable(fname,"damp_v",(/1,1/),(/nx+2,ny+1/),v_2d)
+    damp_v(0:nx+1,1:ny+1)=v_2d(1:nx+2,1:ny+1)
   end subroutine read_ocn_grid
 end module mod_grid
