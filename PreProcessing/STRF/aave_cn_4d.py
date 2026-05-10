@@ -4,8 +4,8 @@ import datetime as dt
 
 gname='eqpac_30'
 fname_grid='../GRID/grid_'+gname+'.nc'
-fname_strf='WOA18_strf_ann_'+gname+'_flood.nc'
-fname_out='WOA18_cn_ann_1d_'+gname+'.nc'
+fname_strf='WOA18_strf_ann_'+gname+'_mode5.nc'
+fname_out='WOA18_cn_ann_1d_'+gname+'_mode5.nc'
 
 
 nc_in=ncdf.Dataset(fname_grid,'r')
