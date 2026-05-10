@@ -102,6 +102,7 @@ contains
     call writenet_wv(trim(fname_rst),"y_u",(/1/),(/ny+2/),y_u(0:ny+1))
     call writenet_wv(trim(fname_rst),"x_v",(/1/),(/nx+2/),x_v(0:nx+1))
     call writenet_wv(trim(fname_rst),"y_v",(/1/),(/ny+1/),y_v(1:ny+1))
+    call writenet_wv(trim(fname_rst),"mode",(/1/),(/nm/),modes(1:nm))
     call writenet_wv(trim(fname_rst),"lon_p",(/1/),(/nx+2/),lon_p(0:nx+1))
     call writenet_wv(trim(fname_rst),"lat_p",(/1/),(/ny+2/),lat_p(0:ny+1))
     call writenet_wv(trim(fname_rst),"lon_u",(/1/),(/nx+1/),lon_u(1:nx+1))

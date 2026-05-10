@@ -12,7 +12,7 @@ LDFLAGS += -cpp -O2 -Wopenmp
 #==========================
 # You don't have to edit the following part
 #==========================
-TARGET=../RUN/exec_lcsm_vs.out
+TARGET=exec_lcsm_vs.out
 OBJ_ncdf  = ncdf_write.o \
 ncdf_read.o
 OBJ = run_param.o \
