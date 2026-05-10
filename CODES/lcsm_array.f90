@@ -30,8 +30,7 @@ module lcsm_array
   real(idx),allocatable :: tau_x(:,:),tau_y(:,:)
   ! Vertical modal function arrays
   real(idx),allocatable :: cn(:)
-  real(idx),allocatable :: bn(:,:,:)
-  real(idx),allocatable :: hn(:,:,:)
+  real(idx),allocatable :: obn(:,:,:)
 
   ! Viscocity
   real(idx),allocatable :: nu(:,:)
