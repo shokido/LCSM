@@ -57,7 +57,7 @@ contains
     integer,intent(inout) :: nx,ny
     real(idx),allocatable,intent(inout) :: x_p(:),y_p(:),x_u(:),y_u(:),x_v(:),y_v(:)
     real(idx),allocatable,intent(inout) :: lon_p(:),lat_p(:),lon_u(:),lat_u(:),lon_v(:),lat_v(:)
-    real(idx),allocatable,intent(inout) :: f(:)
+    real(idx),allocatable,intent(inout) :: f(:,:)
     real(idx),allocatable,intent(inout) :: mask_p(:,:)
     real(idx),allocatable,intent(inout) :: damp_p(:,:),damp_u(:,:),damp_v(:,:)
     integer ::ntmp
@@ -76,7 +76,7 @@ contains
     y_p(0:ny+1)=v_1d(1:ny+2)
     allocate(x_u(1:nx+1)) ; 
     call get_variable(fname,"x_u",(/1/),(/nx+1/),v_1d)
-    x_u(1:nx+1)=v_1d(1:nx+2)
+    x_u(1:nx+1)=v_1d(1:nx+1)
     allocate(y_u(0:ny+1))
     call get_variable(fname,"y_u",(/1/),(/ny+2/),v_1d)
     y_u(0:ny+1)=v_1d(1:ny+2)
@@ -104,9 +104,9 @@ contains
     allocate(lat_v(1:ny+1))
     call get_variable(fname,"lat_v",(/1/),(/ny+1/),v_1d)
     lat_v(1:ny+1)=v_1d(1:ny+1)
-    allocate(f(0:ny+1))
-    call get_variable(fname,"f",(/1/),(/ny+2/),v_1d)
-    f(0:ny+1)=v_1d(1:ny+2)
+    allocate(f(0:nx+1,0:ny+1))
+    call get_variable(fname,"f",(/1,1/),(/nx+2,ny+2/),v_2d)
+    f(0:nx+1,0:ny+1)=v_2d(1:nx+2,1:ny+2)
     allocate(mask_p(0:nx+1,0:ny+1))
     call get_variable(fname,"mask_p",(/1,1/),(/nx+2,ny+2/),v_2d)
     mask_p(0:nx+1,0:ny+1)=v_2d(1:nx+2,1:ny+2)

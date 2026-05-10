@@ -104,7 +104,7 @@ contains
           !=================================
           ! p equation
           !=================================
-          drag_p = -1.0_idx * p(ix,iy) * (oset%A / (cn**2)+damp_p(ix,iy))
+          drag_p = -1.0_idx * p(ix,iy) * (oset%A / (cn**2))*damp_p(ix,iy)
           dudx=-1.0_idx*(cn**2)*(u(ix+1,iy)-u(ix,iy)) / (x_u(ix+1)-x_u(ix))
           dvdy=-1.0_idx*(cn**2)*(v(ix,iy+1)-v(ix,iy)) / (y_v(iy+1)-y_v(iy))
           rhs_p=drag_p + dudx + dvdy
@@ -118,7 +118,7 @@ contains
     implicit none
     integer,intent(in) :: nx,ny
     real(idx),intent(in) :: x_rho(0:nx+1), y_rho(0:ny+1), x_u(1:nx+1), y_u(0:ny+1), x_v(0:nx+1),y_v(1:ny+1)
-    real(idx),intent(in) :: f(0:ny+1)
+    real(idx),intent(in) :: f(0:nx+1,0:ny+1)
     real(idx),intent(in) :: mask_u(1:nx+1,0:ny+1),mask_phi_u(1:nx+1,1:ny+1),damp_u(1:nx+1,0:ny+1)
     real(idx),intent(in) :: nu(0:nx+1,0:ny+1)
     real(idx),intent(in) :: tau_x(0:nx+1,0:ny+1)
@@ -139,12 +139,12 @@ contains
           !=================================
           ! U equation
           !=================================
-          drag_u = -1.0_idx * u(ix,iy) * (oset%A / (cn**2)+damp_u(ix,iy))
-          corx= 0.125_idx * ((f(iy)+f(iy+1))*(v(ix,iy+1)+v(ix-1,iy+1)) + &
-               & (f(iy-1)+f(iy)) * (v(ix,iy)+v(ix-1,iy)))                 ! Coriolis force
-          !corx= 0.25_idx * f(iy) * (v(ix,iy+1)+v(ix-1,iy+1)+v(ix,iy)+v(ix-1,iy)) ! Coriolis force (ENS conserve) 
+          drag_u = -1.0_idx * u(ix,iy) * (oset%A / (cn**2))*damp_u(ix,iy)
+          corx= 0.125_idx * ((f(ix,iy)+f(ix,iy+1))*(v(ix,iy+1)+v(ix-1,iy+1)) + &
+               & (f(ix,iy-1)+f(ix,iy)) * (v(ix,iy)+v(ix-1,iy)))                 ! Coriolis force
+          !corx= 0.25_idx * f(ix,iy) * (v(ix,iy+1)+v(ix-1,iy+1)+v(ix,iy)+v(ix-1,iy)) ! Coriolis force (ENS conserve) 
           pgrdx= -1.0_idx*(p(ix,iy)-p(ix-1,iy)) / (x_rho(ix)-x_rho(ix-1)) !Pressure gradient force
-          tx= 0.5_idx*(tau_x(ix-1,iy) + tau_x(ix,iy)) * (obn(ix-1,iy)+obn(ix,iy)) / oset%rho0            ! Wind forcing
+          tx= 0.25_idx*(tau_x(ix-1,iy) + tau_x(ix,iy)) * (obn(ix-1,iy)+obn(ix,iy)) / oset%rho0            ! Wind forcing
           ! U-viscosity
           dudx_e = (u(ix+1,iy) - u(ix,iy)) / (x_u(ix+1)-x_u(ix))
           dudx_w = (u(ix,iy) - u(ix-1,iy)) / (x_u(ix)-x_u(ix-1))
@@ -165,7 +165,7 @@ contains
     implicit none
     integer,intent(in) :: nx,ny
     real(idx),intent(in) :: x_rho(0:nx+1), y_rho(0:ny+1), x_u(1:nx+1), y_u(0:ny+1), x_v(0:nx+1),y_v(1:ny+1)
-    real(idx),intent(in) :: f(0:ny+1)
+    real(idx),intent(in) :: f(0:nx+1,0:ny+1)
     real(idx),intent(in) :: mask_v(0:nx+1,1:ny+1),mask_phi_v(1:nx+1,1:ny+1)
     real(idx),intent(in) :: damp_v(0:nx+1,1:ny+1)
     real(idx),intent(in) :: nu(0:nx+1,0:ny+1),tau_y(0:nx+1,0:ny+1)
@@ -185,11 +185,11 @@ contains
           !=================================
           ! V equation
           !=================================
-          drag_v = -1.0_idx * v(ix,iy) * (oset%A / (cn**2)+damp_v(ix,iy))
-          cory = -0.125_idx * (f(iy)+f(iy-1))*(u(ix,iy-1)+u(ix+1,iy-1)+u(ix,iy)+u(ix+1,iy)) ! Coriolis force(ENS conserve)
-          !cory = -0.25_idx *  (f(iy) * u(ix,iy)+ f(iy)* u(ix+1,iy)+f(iy-1) * u(ix,iy-1)+ f(iy-1)* u(ix+1,iy-1))! Coriolis force (ENG conserve) !
+          drag_v = -1.0_idx * v(ix,iy) * (oset%A / (cn**2))*damp_v(ix,iy)
+          cory = -0.125_idx * (f(ix,iy)+f(ix,iy-1))*(u(ix,iy-1)+u(ix+1,iy-1)+u(ix,iy)+u(ix+1,iy)) ! Coriolis force(ENS conserve)
+          !cory = -0.25_idx *  (f(ix,iy) * u(ix,iy)+ f(ix,iy)* u(ix+1,iy)+f(ix,iy-1) * u(ix,iy-1)+ f(ix,iy-1)* u(ix+1,iy-1))! Coriolis force (ENG conserve) !
           pgrdy=-1.0_idx*(p(ix,iy)-p(ix,iy-1)) / (y_rho(iy)-y_rho(iy-1)) ! pressure gradient force
-          ty=0.5_idx*(tau_y(ix,iy-1) + tau_y(ix,iy)) * (obn(ix,iy-1)+obn(ix,iy)) / oset%rho0
+          ty=0.25_idx*(tau_y(ix,iy-1) + tau_y(ix,iy)) * (obn(ix,iy-1)+obn(ix,iy)) / oset%rho0
           dvdx_e = mask_phi_v(ix+1,iy) * (v(ix+1,iy) -  v(ix,iy)) / (x_v(ix+1)-x_v(ix))
           dvdx_w = mask_phi_v(ix,iy) * (v(ix,iy) -  v(ix-1,iy)) / (x_v(ix)-x_v(ix-1))
           dvdy_n = (v(ix,iy+1) - v(ix,iy)) / (y_v(iy+1)-y_v(iy))
@@ -280,7 +280,7 @@ contains
     integer,intent(in) :: nx,ny
     real(idx),intent(in) :: mask_v(0:nx+1,1:ny+1)
     real(idx),intent(inout) :: v(0:nx+1,1:ny+1)
-    real(idx),intent(in) :: v_past(0:nx+1,1:ny+1),v_next(1:nx+1,1:ny+1)
+    real(idx),intent(in) :: v_past(0:nx+1,1:ny+1),v_next(0:nx+1,1:ny+1)
     integer :: ix,iy
     ! Filter-------------------------------------------
     ! v    x:1~nx # 1:WB nx+1:EB
@@ -313,7 +313,7 @@ contains
     select case(wbc_flag)
     case ("Clo","CLO","clo") ! Closed bondary
        do iy = 1,ny
-          u_next(1,iy) = 0.0_8
+          u_next(1,iy) = 0.0_idx
        end do
     case ("Gra","GRA","gra") ! Gradient boundary
        do iy = 1,ny
@@ -326,7 +326,7 @@ contains
     select case(ebc_flag)
     case ("Clo","CLO","clo") ! Closed bondary condition
        do iy = 1,ny
-          u_next(nx+1,iy) = 0.0_8
+          u_next(nx+1,iy) = 0.0_idx
        end do
     case ("Gra","GRA","gra") ! Gradient boundary condition
        do iy = 1,ny
@@ -371,7 +371,7 @@ contains
     integer :: ix,iy
     real(idx) :: mu,mux,muy
     real(idx) :: tiny=1.0e-20
-    gamma2 = 1.0_8 - 2.0_idx*slip_ind ! gamma2=1 for slip_ind=0 (du/dx=0),gamma2=-1 for slip_ind=2 (u=0)
+    gamma2 = 1.0_idx - 2.0_idx*slip_ind ! gamma2=1 for slip_ind=0 (du/dx=0),gamma2=-1 for slip_ind=2 (u=0)
     !=================================
     ! Western boundary condition
     !=================================
@@ -404,7 +404,7 @@ contains
     select case(sbc_flag)
     case ("Clo","CLO","clo") ! Closed bondary
        do ix = 1,nx
-          v_next(ix,1) = 0.0_8
+          v_next(ix,1) = 0.0_idx
        end do
     case ("Gra","GRA","gra") ! Gradient boundary
        do ix = 1,nx
@@ -417,7 +417,7 @@ contains
     select case(nbc_flag)
     case ("Clo","CLO","clo") ! Closed bondary
        do ix = 1,nx
-          v_next(ix,ny+1) = 0.0_8
+          v_next(ix,ny+1) = 0.0_idx
        end do
     case ("Gra","GRA","gra") ! Gradient boundary
        do ix = 1,nx
@@ -438,7 +438,7 @@ contains
     select case(wbc_flag)
     case ("Clo","CLO","clo") ! Closed bondary
        do iy = 1,ny
-          p_next(0,iy) = 0.0_8
+          p_next(0,iy) = 0.0_idx
        end do
     case ("Gra","GRA","gra") ! Gradient boundary
        do iy = 1,ny
@@ -451,7 +451,7 @@ contains
     select case(ebc_flag)
     case ("Clo","CLO","clo") ! Closed bondary
        do iy = 1,ny
-          p_next(nx+1,iy) = 0.0_4
+          p_next(nx+1,iy) = 0.0_idx
        end do
     case ("Gra","GRA","gra") ! Gradient boundary
        do iy = 1,ny
@@ -464,7 +464,7 @@ contains
     select case(sbc_flag)
     case ("Clo","CLO","clo") ! Closed bondary
        do ix = 1,nx
-          p_next(ix,0) = 0.0_8
+          p_next(ix,0) = 0.0_idx
        end do
     case ("Gra","GRA","gra") ! Gradient boundary
        do ix = 1,nx
@@ -477,7 +477,7 @@ contains
     select case(nbc_flag)
     case ("Clo","CLO","clo") ! Closed bondary
        do ix = 1,nx
-          p_next(ix,ny+1) = 0.0_8
+          p_next(ix,ny+1) = 0.0_idx
        end do
     case ("Gra","GRA","gra") ! Gradient boundary
        do ix = 1,nx

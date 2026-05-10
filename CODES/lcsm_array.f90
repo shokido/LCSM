@@ -14,7 +14,7 @@ module lcsm_array
   real(idx),allocatable :: x_u(:),y_u(:)
   real(idx),allocatable :: x_v(:),y_v(:)
   ! Coriolis parameter
-  real(idx),allocatable :: f(:)
+  real(idx),allocatable :: f(:,:)
   ! Mask arrays
   real(idx),allocatable :: mask_u(:,:),mask_v(:,:),mask_p(:,:)
   real(idx),allocatable :: mask_phi_u(:,:),mask_phi_v(:,:)
