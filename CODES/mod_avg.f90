@@ -34,19 +34,29 @@ contains
     character(len=maxlen) :: ref_time
     integer :: tmp_yymmdd,tmp_hhmmss
     character(len=maxlen) :: dim_names(8),dim_types(8)
-    ref_time=calendar_create_time_att(start_yymmdd,start_hhmmss,out_flag)
+    ref_time=calendar_create_time_att(start_yymmdd,start_hhmmss,1)
     do im = 1,nm
        modes(im) = im
     end do
     call calendar_cal_length_ymdhms(start_yymmdd,start_hhmmss,end_yymmdd,end_hhmmss,out_flag,tmp)
     nt= int(tmp / out_int)
     nt=max(nt,1)
+    if (allocated(istep) .eqv. .true.) then
+       deallocate(istep)
+    end if    
+    if (allocated(time) .eqv. .true.) then
+       deallocate(time)
+    end if    
     allocate(time(nt)); allocate(istep(nt))
     do it=1,nt
-       time(it) = (real(it))* out_int
+       time(it) = (real(it))* out_int       
        call calendar_cal_ymdhms_after(start_yymmdd,start_hhmmss,time(it),out_flag,tmp_yymmdd,tmp_hhmmss)
-       call calendar_cal_length_ymdhms(start_yymmdd,start_hhmmss,tmp_yymmdd,tmp_hhmmss,-10000,tmp)
-       istep(it)=int(tmp/dt)
+       call calendar_cal_length_ymdhms(start_yymmdd,start_hhmmss,tmp_yymmdd,tmp_hhmmss,1,tmp)
+       istep(it)=int(tmp/(dt*sec_to_day))
+       time(it) = (real(it-0.5))* out_int
+       call calendar_cal_ymdhms_after(start_yymmdd,start_hhmmss,time(it),out_flag,tmp_yymmdd,tmp_hhmmss)
+       call calendar_cal_length_ymdhms(start_yymmdd,start_hhmmss,tmp_yymmdd,tmp_hhmmss,1,tmp)
+       time(it) = real(tmp)
     end do
     dim_names(1)="x_p"
     dim_names(2)="y_p"
