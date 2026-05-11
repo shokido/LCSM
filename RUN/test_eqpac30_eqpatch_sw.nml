@@ -1,0 +1,77 @@
+! Namelist of LCSM code
+!
+&date
+dt=3600.0             ! time step in seconds
+start_yymmdd=19000101 ! Start year,month,day
+start_hhmmss=000000   ! Start hour,minute,second
+end_yymmdd=19000501 ! End year,month,day
+end_hhmmss=000000   ! End hour,minute,second
+/
+&grid
+fname_in_grid='../PreProcessing/GRID/grid_eqpac_30.nc'
+/
+&taux_param_ocn
+nfile_ocn_taux=1
+timename_ocn_taux="time"
+varname_ocn_taux="uw"
+Lcycle_ocn_taux="T"
+Tcycle_ocn_taux=365.0
+/
+&taux_io_ocn
+fnames_ocn_taux(1)="../PreProcessing/WIND/wstress_eqpatch_eqpac_30.nc"
+/
+&tauy_param_ocn
+nfile_ocn_tauy=1
+timename_ocn_tauy="time"
+varname_ocn_tauy="vw"
+Lcycle_ocn_tauy="T"
+Tcycle_ocn_tauy=365.0
+/
+&tauy_io_ocn
+fnames_ocn_tauy(1)="../PreProcessing/WIND/wstress_eqpatch_eqpac_30.nc"
+/
+&cn_param_ocn
+nfile_ocn_cn=1
+timename_ocn_cn="time"
+varname_ocn_cn="cn"
+Lcycle_ocn_cn="T"
+Tcycle_ocn_cn=365.0
+/
+&cn_io_ocn
+fnames_ocn_cn(1)="../PreProcessing/STRF/Shallow_Water/SW_strf_eqpac_30.nc"
+/
+&obn_param_ocn
+nfile_ocn_obn=1
+timename_ocn_obn="time"
+varname_ocn_obn="obn"
+Lcycle_ocn_obn="T"
+Tcycle_ocn_obn=365.0
+/
+&obn_io_ocn
+fnames_ocn_obn(1)="../PreProcessing/STRF/Shallow_Water/SW_strf_eqpac_30.nc"
+/
+&init
+in_rst_flag="F"
+fname_in_rst="restart_eqpac30.nc"
+/
+! History file
+&output_hist
+out_hist_flag=1
+out_hist_int=5
+fname_out_hist="../OUTPUTS/hist_eqpac30_eqpatch_sw.nc"
+/
+! Average file
+&output_avg
+out_avg_flag=1
+out_avg_int=5
+fname_out_avg="../OUTPUTS/avg_eqpac30_eqpatch_sw.nc"
+/
+&output_rst
+out_rst_flag="T"
+fname_out_rst="../OUTPUTS/restart_eqpac30_eqpatch_sw.nc"
+/
+&param_ocn
+oset%slip_ind=2.0
+oset%nu_h=2.0e4
+oset%A=1.3333e-7
+/
