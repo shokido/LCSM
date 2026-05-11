@@ -10,8 +10,10 @@ The repository provides one main executable:
 -  `exec_solver_lcsm_dyn.out`: standalone ocean dynamical model forced by prescribed wind stress, the wind projection coefficients, and wave speeds of baroclinic modes.
 
 ## Example Visualization
-Simulated pressure and horizontal velocity fields for single baroclinic mode (and thus equivalent to the linear reduced-gravity wave model) in response to an equatorial wind patch.
+- Animation map of simulated pressure and horizontal velocity fields for single baroclinic mode (and thus equivalent to the linear reduced-gravity wave model) in response to an equatorial wind patch.
 ![UVH eqpatch animation](GALLERY/anim_uvh_eqpac30_eqpatch.gif)
+- Depth-longitude section of simulated zonal velocity along the equatorial Pacific for the spin-up simulation forced by JRA55-do climatological forcing.
+![Zonal section](GALLERY/figure_eqsec_eqpac30_mode10.png)
 
 ## Repository Structure
 
