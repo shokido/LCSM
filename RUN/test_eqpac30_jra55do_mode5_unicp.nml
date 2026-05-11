@@ -38,7 +38,7 @@ Lcycle_ocn_cn="T"
 Tcycle_ocn_cn=365.0
 /
 &cn_io_ocn
-fnames_ocn_cn(1)="../PreProcessing/STRF/WOA18_cn_ann_1d_eqpac_30_mode5.nc"
+fnames_ocn_cn(1)="../PreProcessing/STRF/STRF_TLLL/WOA18_cn_ann_1d_eqpac_30_mode5.nc"
 /
 &obn_param_ocn
 nfile_ocn_obn=1
@@ -48,7 +48,7 @@ Lcycle_ocn_obn="T"
 Tcycle_ocn_obn=365.0
 /
 &obn_io_ocn
-fnames_ocn_obn(1)="../PreProcessing/STRF/WOA18_strf_ann_eqpac_30_mode5.nc"
+fnames_ocn_obn(1)="../PreProcessing/STRF/STRF_TLLL/WOA18_strf_ann_eqpac_30_mode5.nc"
 /
 &init
 in_rst_flag="F"
