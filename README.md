@@ -108,7 +108,7 @@ cd RUN/
 
  The modal functions at each grid point can be obtained by solving the following eigenvalue problem,
 ```math
-\frac{d}{dz}(\frac{1}{N^{2}}\frac{d}{dz})=-\frac{1}{c_{n}^2}\psi_{n}
+\frac{d}{dz}(\frac{1}{N^{2}}\frac{d\psi_{n}}{dz})=-\frac{1}{c_{n}^2}\psi_{n}
 ```
 with the boundary conditions
 ```math
