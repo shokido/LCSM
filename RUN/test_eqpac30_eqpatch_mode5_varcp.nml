@@ -14,7 +14,7 @@ fname_in_grid='../PreProcessing/GRID/grid_eqpac_30.nc'
 nfile_ocn_taux=1
 timename_ocn_taux="time"
 varname_ocn_taux="uw"
-Lcycle_ocn_taux="T"
+Lcycle_ocn_taux="F"
 Tcycle_ocn_taux=365.0
 /
 &taux_io_ocn
@@ -24,7 +24,7 @@ fnames_ocn_taux(1)="../PreProcessing/WIND/wstress_eqpatch_eqpac_30.nc"
 nfile_ocn_tauy=1
 timename_ocn_tauy="time"
 varname_ocn_tauy="vw"
-Lcycle_ocn_tauy="T"
+Lcycle_ocn_tauy="F"
 Tcycle_ocn_tauy=365.0
 /
 &tauy_io_ocn
