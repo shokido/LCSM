@@ -7,10 +7,10 @@ NETCDF_LIBDIR=-L/opt/homebrew/Cellar/netcdf-fortran/4.6.1/lib -L/opt/homebrew/Ce
 FFLAGS += $(NETCDF_INCDIR)
 LDFLAGS += $(NETCDF_LIBDIR) -lnetcdf -lnetcdff
 
-TARGET_CONV=exec_convert_to_z_4d.out
+TARGET_CONV=exec_convert_LCSM_to_zlev.out
 OBJ_NCDF  = ncdf_write.o \
 ncdf_read.o
-OBJ_CONV  = convert_to_z_4d.o
+OBJ_CONV  = convert_LCSM_to_zlev.o
 
 MODS= ncdf_read.mod \
 ncdf_write.mod
@@ -25,7 +25,7 @@ ncdf_read.o:ncdf_read.f90
 	$(FC) -c $< ${LDFLAGS} ${FFLAGS}
 ncdf_write.o:ncdf_write.f90
 	$(FC) -c $< ${LDFLAGS} ${FFLAGS}
-convert_to_z_4d.o:convert_to_z_4d.f90
+convert_LCSM_to_zlev.o:convert_LCSM_to_zlev.f90
 	$(FC) -c $< ${LDFLAGS} ${FFLAGS}
 clean:
 	rm -f $(TARGET_CONV) $(OBJ_NCDF) $(OBJ_CONV) $(MODS)

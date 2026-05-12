@@ -6,7 +6,7 @@ nfile=1
 &fnames
 fname_grid="../PreProcessing/GRID/grid_eqpac_30.nc"
 fname_lev="lev_out.dat"
-fname_strf(1)="../PreProcessing/STRF/WOA18_strf_ann_eqpac_30_mode5.nc"
+fname_strf(1)="../PreProcessing/STRF/STRF_TLLL/WOA18_strf_ann_eqpac_30_mode5.nc"
 fname_ocn(1)="../OUTPUTS/avg_eqpac30_eqpatch_mode5_unicp.nc"
 fname_out(1)="../OUTPUTS/avg_zlev_eqpac30_eqpatch_mode5_unicp.nc"
 /

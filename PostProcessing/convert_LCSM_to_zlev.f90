@@ -1,7 +1,6 @@
-program convert_to_z_4d
+program convert_LCSM_to_zlev
   use ncdf_read
   use ncdf_write
-  ! ifort  -o exec_convert_to_z_4d.out convert_to_z_4d.f90 $FPATH_FORT $LPATH_FORT -lncdf_read  -lncdf_write -lnetcdf -lnetcdff
   implicit none
   integer,parameter :: idx = 8,maxlen=400
   integer :: nfile
@@ -197,4 +196,4 @@ program convert_to_z_4d
   deallocate(fname_strf)
   deallocate(fname_ocn)
   deallocate(fname_out)
-end program convert_to_z_4d
+end program convert_LCSM_to_zlev
