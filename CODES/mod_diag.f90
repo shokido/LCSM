@@ -1,145 +1,191 @@
-module mod_avg
+module mod_diag
   use run_param
+  use run_types
   use calendar_sub
+  use ncdf_write
   implicit none
-  ! Time array
-  integer :: ntime_avg,iavg
-  real(idx),allocatable :: time_avg(:)
-  integer,allocatable :: istep_avg(:)  
-  integer :: out_avg_flag,out_avg_int
-  character(maxlen) :: fname_out_avg
-  ! Shallow water
-  real(idx),allocatable :: u_avg(:,:,:),v_avg(:,:,:),p_avg(:,:,:)
-  ! Namelist
-  namelist/output_avg/out_avg_flag,out_avg_int
-  namelist/output_avg/fname_out_avg
+  integer :: ntime_diag,idiag
+  real(idx),allocatable :: time_diag(:)
+  integer,allocatable :: istep_diag(:)  
 contains
-  !==========================
-  ! Creation of average file
-  !==========================
-  subroutine create_avg(fname,nx,ny,nm,x_p,y_p,x_u,y_u,x_v,y_v,&
-       & lon_p,lat_p,lon_u,lat_u,lon_v,lat_v,&
+  subroutine create_diag(fname,grd,oset,&
        & start_yymmdd,start_hhmmss,end_yymmdd,end_hhmmss,&
        & out_flag,out_int,missing_value,istep,nt)
     use ncdf_write
     implicit none
     character(len=*),intent(in) :: fname
-    integer,intent(inout) :: nx,ny,nm
-    real(idx),intent(in) :: x_p(0:nx+1),y_p(0:ny+1),x_u(1:nx+1),y_u(0:ny+1),x_v(0:nx+1),y_v(1:ny+1)
-    real(idx),intent(in) :: lon_p(0:nx+1),lat_p(0:ny+1),lon_u(1:nx+1),lat_u(0:ny+1),lon_v(0:nx+1),lat_v(1:ny+1)
+    type(ocn_dta),intent(in) :: grd
+    type(ocn_set),intent(in) :: oset
     integer,intent(in) :: start_yymmdd,start_hhmmss,end_yymmdd,end_hhmmss,out_flag,out_int
     real(idx),intent(in) :: missing_value
     integer,allocatable,intent(inout) :: istep(:)
     integer,intent(inout) :: nt
     real(idx),allocatable :: time(:)
-    integer :: im,it
-    real(idx) :: modes(nm),tmp
-    character :: ichar*2,vnames_u(nm)*10,vnames_v(nm)*10,vnames_p(nm)*10
-    character :: vunits_u(nm)*10,vunits_v(nm)*10,vunits_p(nm)*10
-    character(len=300) :: ref_time
-    ref_time=calendar_create_time_att(start_yymmdd,start_hhmmss,out_flag)
-    do im = 1,nm
-       modes(im) = im
-    end do
-    nt= calendar_cal_ymd_length(start_yymmdd,start_hhmmss,end_yymmdd,end_hhmmss,out_flag) / out_int
+    integer :: nx,ny,nm,im,it
+    real(idx) :: tmp
+    character(len=maxlen) :: ref_time
+    integer :: tmp_yymmdd,tmp_hhmmss
+    character(len=maxlen) :: dim_names(8),dim_types(8)
+    nx=grd%nx_p;ny=grd%ny_p;nm=grd%nm
+    ref_time=calendar_create_time_att(start_yymmdd,start_hhmmss,1)
+    call calendar_cal_length_ymdhms(start_yymmdd,start_hhmmss,end_yymmdd,end_hhmmss,out_flag,tmp)
+    nt= int(tmp / out_int)
+    nt=max(nt,1)
+    if (allocated(istep) .eqv. .true.) then
+       deallocate(istep)
+    end if    
+    if (allocated(time) .eqv. .true.) then
+       deallocate(time)
+    end if    
     allocate(time(nt)); allocate(istep(nt))
     do it=1,nt
-       time(it) = (real(it))* out_int
-       tmp=calendar_cal_ymd_after(start_yymmdd,start_hhmmss,time(it),out_flag)
-       istep(it)=int(tmp/dt)
-       time(it) = (real(it)-0.5_idx)* out_int
+       time(it) = (real(it))* out_int       
+       call calendar_cal_ymdhms_after(start_yymmdd,start_hhmmss,time(it),out_flag,tmp_yymmdd,tmp_hhmmss)
+       call calendar_cal_length_ymdhms(start_yymmdd,start_hhmmss,tmp_yymmdd,tmp_hhmmss,1,tmp)
+       istep(it)=int(tmp/(dt*sec_to_day))
+       time(it) = (real(it-0.5))* out_int
+       call calendar_cal_ymdhms_after(start_yymmdd,start_hhmmss,time(it),out_flag,tmp_yymmdd,tmp_hhmmss)
+       call calendar_cal_length_ymdhms(start_yymmdd,start_hhmmss,tmp_yymmdd,tmp_hhmmss,1,tmp)
+       time(it) = real(tmp)
     end do
-    call writenet_pre(fname,nx+2,ny+2,nm,nt,"x_p","y_p","mode","time","m","m","",trim(ref_time),&
-         & x_p(0:nx+1),y_p(0:ny+1),modes(1:nm),time(1:nt))
-    call writenet_dd(trim(fname),nx+1,"x_u")
-    call writenet_dd(trim(fname),ny+2,"y_u")
-    call writenet_dd(trim(fname),nx+2,"x_v")
-    call writenet_dd(trim(fname),ny+1,"y_v")
-
-    call writenet_dv(trim(fname),"x_u",2,(/"x_u","lon_u"/),(/"m","degrees_east"/),missing_value)
-    call writenet_dv(trim(fname),"y_u",2,(/"y_u","lat_u"/),(/"m","degrees_north"/),missing_value)
-    call writenet_dv(trim(fname),"x_v",2,(/"x_v","lon_v"/),(/"m","degrees_east"/),missing_value)
-    call writenet_dv(trim(fname),"y_v",2,(/"y_v","lat_v"/),(/"m","degrees_north"/),missing_value)
+    dim_names(1)="x_p"
+    dim_names(2)="y_p"
+    dim_names(3)="x_u"
+    dim_names(4)="y_u"
+    dim_names(5)="x_v"
+    dim_names(6)="y_v"
+    dim_names(7)="mode"
+    dim_names(8)="time"
+    do it=1,8
+       dim_types(it)="double"
+    end do    
+    call writenet_def_dim(trim(fname),8,(/nx+2,ny+2,&
+         & nx+1,ny+2,nx+2,ny+1,nm,nt/),dim_names,dim_types)
+    call add_var_att(trim(fname),"mode","units","")         
+    call add_var_att(trim(fname),"time","units",ref_time)         
+    call writenet_dv(trim(fname),"x_u",1,(/"lon_u"/),(/"degrees_east"/),missing_value)
+    call writenet_dv(trim(fname),"y_u",1,(/"lat_u"/),(/"degrees_north"/),missing_value)
+    call writenet_dv(trim(fname),"x_v",1,(/"lon_v"/),(/"degrees_east"/),missing_value)
+    call writenet_dv(trim(fname),"y_v",1,(/"lat_v"/),(/"degrees_north"/),missing_value)
     call writenet_dv(trim(fname),"x_p",1,(/"lon_p"/),(/"degrees_east"/),missing_value)
     call writenet_dv(trim(fname),"y_p",1,(/"lat_p"/),(/"degrees_north"/),missing_value)
 
-    do im = 1,nm
-       write(ichar,'(i2)') im
-       vnames_u(im)="u"//trim(adjustl(ichar))
-       vnames_v(im)="v"//trim(adjustl(ichar))
-       vnames_p(im)="p"//trim(adjustl(ichar))
-       vunits_u(im)="m/s"
-       vunits_v(im)="m/s"
-       vunits_p(im)="hPa/(kg/m^3)"
-    end do
-    call writenet_dv(trim(fname),"x_u","y_u","time",nm,vnames_u,vunits_u,missing_value)
-    call writenet_dv(trim(fname),"x_v","y_v","time",nm,vnames_v,vunits_v,missing_value)
-    call writenet_dv(trim(fname),"x_p","y_p","time",nm,vnames_p,vunits_p,missing_value)
-    ! Write coordinate variables
-    call writenet_wv(trim(fname),"x_p",1,nx+2,x_p(0:nx+1))
-    call writenet_wv(trim(fname),"y_p",1,ny+2,y_p(0:ny+1))
-    call writenet_wv(trim(fname),"x_u",1,nx+1,x_u(1:nx+1))
-    call writenet_wv(trim(fname),"y_u",1,ny+2,y_u(0:ny+1))
-    call writenet_wv(trim(fname),"x_v",1,nx+2,x_v(0:nx+1))
-    call writenet_wv(trim(fname),"y_v",1,ny+1,y_v(1:ny+1))
-    call writenet_wv(trim(fname),"lon_p",1,nx+2,lon_p(0:nx+1))
-    call writenet_wv(trim(fname),"lat_p",1,ny+2,lat_p(0:ny+1))
-    call writenet_wv(trim(fname),"lon_u",1,nx+1,lon_u(1:nx+1))
-    call writenet_wv(trim(fname),"lat_u",1,ny+2,lat_u(0:ny+1))
-    call writenet_wv(trim(fname),"lon_v",1,nx+2,lon_v(0:nx+1))
-    call writenet_wv(trim(fname),"lat_v",1,ny+1,lat_v(1:ny+1))
-  end subroutine create_avg
-  subroutine write_avg(fname,nx,ny,nm,irec,u,v,p,mask_u,mask_v,mask_p,missing_value,avg_count)
-    use ncdf_write
-    implicit none
-    character(len=*),intent(in) :: fname
-    integer,intent(inout) :: nx,ny,nm,irec
-    real(idx),intent(inout) :: u(1:nm,1:nx+1,0:ny+1),v(1:nm,0:nx+1,1:nx+1),p(1:nm,0:nx+1,0:ny+1)
-    real(idx),intent(in) :: mask_u(1:nx+1,0:ny+1),mask_v(0:nx+1,1:nx+1),mask_p(0:nx+1,0:ny+1)
-    real(idx),intent(in) :: missing_value
-    integer,intent(in) :: avg_count
-    real(idx) :: u_2d(1:nx+1,0:ny+1,1),v_2d(0:nx+1,1:nx+1,1),p_2d(0:nx+1,0:ny+1,1)
-    integer :: im,ix,iy
-    character :: ichar*2,vname*10
-    do im = 1,nm
-       do iy=0,ny+1
-          do ix=0,nx+1
-             if (mask_p(ix,iy) .eq. 0.0_idx) then
-                p_2d(ix,iy,1)=missing_value
-             else
-                p_2d(ix,iy,1)=p(im,ix,iy)/avg_count
-             end if
-          end do
-          p(im,ix,iy)=0.0_idx
-       end do
-       do iy=0,ny+1
-          do ix=1,nx+1
-             if (mask_u(ix,iy) .eq. 0.0_idx) then
-                u_2d(ix,iy,1)=missing_value
-             else
-                u_2d(ix,iy,1)=u(im,ix,iy)/avg_count
-             end if
-             u(im,ix,iy)=0.0_idx
-          end do
-       end do
-       do iy=1,ny+1
-          do ix=0,nx+1
-             if (mask_v(ix,iy) .eq. 0.0_idx) then
-                v_2d(ix,iy,1)=missing_value
-             else
-                v_2d(ix,iy,1)=v(im,ix,iy)/avg_count
-             end if
-             v(im,ix,iy)=1.0_idx
-          end do
-       end do
-       write(ichar,'(i2)') im
-       vname="u"//trim(adjustl(ichar))
-       call writenet_wv(trim(fname),trim(vname),1,nx+1,1,ny+2,irec,irec,u_2d(1:nx+1,0:ny+1,1:1))
-       vname="v"//trim(adjustl(ichar))
-       call writenet_wv(trim(fname),trim(vname),1,nx+2,1,ny+1,irec,irec,v_2d(0:nx+1,1:ny+1,1:1))
-       vname="p"//trim(adjustl(ichar))
-       call writenet_wv(trim(fname),trim(vname),1,nx+2,1,ny+2,irec,irec,p_2d(0:nx+1,0:ny+1,1:1))
-    end do
-  end subroutine write_avg
+    call writenet_dv(trim(fname),"x_u","y_u","mode","time",1,(/"u_rate"/),(/"m/s^2"/),missing_value)
+    call writenet_dv(trim(fname),"x_u","y_u","mode","time",1,(/"u_drag"/),(/"m/s^2"/),missing_value)
+    call writenet_dv(trim(fname),"x_u","y_u","mode","time",1,(/"u_cori"/),(/"m/s^2"/),missing_value)
+    call writenet_dv(trim(fname),"x_u","y_u","mode","time",1,(/"u_prgf"/),(/"m/s^2"/),missing_value)
+    call writenet_dv(trim(fname),"x_u","y_u","mode","time",1,(/"u_wind"/),(/"m/s^2"/),missing_value)
+    call writenet_dv(trim(fname),"x_u","y_u","mode","time",1,(/"u_hdif"/),(/"m/s^2"/),missing_value)
 
-end module mod_avg
+    call writenet_dv(trim(fname),"x_v","y_v","mode","time",1,(/"v_rate"/),(/"m/s^2"/),missing_value)
+    call writenet_dv(trim(fname),"x_v","y_v","mode","time",1,(/"v_drag"/),(/"m/s^2"/),missing_value)
+    call writenet_dv(trim(fname),"x_v","y_v","mode","time",1,(/"v_cori"/),(/"m/s^2"/),missing_value)
+    call writenet_dv(trim(fname),"x_v","y_v","mode","time",1,(/"v_prgf"/),(/"m/s^2"/),missing_value)
+    call writenet_dv(trim(fname),"x_v","y_v","mode","time",1,(/"v_wind"/),(/"m/s^2"/),missing_value)
+    call writenet_dv(trim(fname),"x_v","y_v","mode","time",1,(/"v_hdif"/),(/"m/s^2"/),missing_value)
+
+    call writenet_dv(trim(fname),"x_p","y_p","mode","time",1,(/"p_rate"/),(/"m^2/s^3"/),missing_value)
+    call writenet_dv(trim(fname),"x_p","y_p","mode","time",1,(/"p_drag"/),(/"m^2/s^3"/),missing_value)
+    call writenet_dv(trim(fname),"x_p","y_p","mode","time",1,(/"p_dudx"/),(/"m^2/s^3"/),missing_value)
+    call writenet_dv(trim(fname),"x_p","y_p","mode","time",1,(/"p_dvdy"/),(/"m^2/s^3"/),missing_value)
+    ! Write coordinate variables
+    call writenet_wv(trim(fname),"lon_p",(/1/),(/nx+2/),grd%lon_p%val(0:nx+1))
+    call writenet_wv(trim(fname),"lat_p",(/1/),(/ny+2/),grd%lat_p%val(0:ny+1))
+    call writenet_wv(trim(fname),"lon_u",(/1/),(/nx+1/),grd%lon_u%val(1:nx+1))
+    call writenet_wv(trim(fname),"lat_u",(/1/),(/ny+2/),grd%lat_u%val(0:ny+1))
+    call writenet_wv(trim(fname),"lon_v",(/1/),(/nx+2/),grd%lon_v%val(0:nx+1))
+    call writenet_wv(trim(fname),"lat_v",(/1/),(/ny+1/),grd%lat_v%val(1:ny+1))
+    call writenet_wv(trim(fname),"mode",(/1/),(/nm/),grd%modes%val(1:nm))
+    call writenet_wv(trim(fname),"time",(/1/),(/nt/),time(1:nt))
+  end subroutine create_diag
+  subroutine allocate_ocn_diag(grd)
+    implicit none
+    type(ocn_dta),intent(inout) :: grd
+    integer :: nx_p,ny_p,nm
+    nx_p=grd%nx_p;ny_p=grd%ny_p;nm=grd%nm
+    allocate(grd%u_rate%val(1:nm,1:nx_p+1,0:ny_p+1))
+    allocate(grd%u_drag%val(1:nm,1:nx_p+1,0:ny_p+1))
+    allocate(grd%u_cori%val(1:nm,1:nx_p+1,0:ny_p+1))
+    allocate(grd%u_prgf%val(1:nm,1:nx_p+1,0:ny_p+1))
+    allocate(grd%u_wind%val(1:nm,1:nx_p+1,0:ny_p+1))
+    allocate(grd%u_hdif%val(1:nm,1:nx_p+1,0:ny_p+1))
+    allocate(grd%v_rate%val(1:nm,0:nx_p+1,1:ny_p+1))
+    allocate(grd%v_drag%val(1:nm,0:nx_p+1,1:ny_p+1))
+    allocate(grd%v_cori%val(1:nm,0:nx_p+1,1:ny_p+1))
+    allocate(grd%v_prgf%val(1:nm,0:nx_p+1,1:ny_p+1))
+    allocate(grd%v_wind%val(1:nm,0:nx_p+1,1:ny_p+1))
+    allocate(grd%v_hdif%val(1:nm,0:nx_p+1,1:ny_p+1))
+    allocate(grd%p_rate%val(1:nm,0:nx_p+1,0:ny_p+1))
+    allocate(grd%p_drag%val(1:nm,0:nx_p+1,0:ny_p+1))
+    allocate(grd%p_dudx%val(1:nm,0:nx_p+1,0:ny_p+1))
+    allocate(grd%p_dvdy%val(1:nm,0:nx_p+1,0:ny_p+1))
+   end subroutine allocate_ocn_diag
+  subroutine clean_ocn_diag(grd)
+    implicit none
+    type(ocn_dta),intent(inout) :: grd
+    integer :: nx_p,ny_p,nm
+    nx_p=grd%nx_p;ny_p=grd%ny_p;nm=grd%nm
+    grd%u_rate%val(1:nm,1:nx_p+1,0:ny_p+1)=0.0_idx
+    grd%u_drag%val(1:nm,1:nx_p+1,0:ny_p+1)=0.0_idx
+    grd%u_cori%val(1:nm,1:nx_p+1,0:ny_p+1)=0.0_idx
+    grd%u_prgf%val(1:nm,1:nx_p+1,0:ny_p+1)=0.0_idx
+    grd%u_wind%val(1:nm,1:nx_p+1,0:ny_p+1)=0.0_idx
+    grd%u_hdif%val(1:nm,1:nx_p+1,0:ny_p+1)=0.0_idx
+    grd%v_rate%val(1:nm,0:nx_p+1,1:ny_p+1)=0.0_idx
+    grd%v_drag%val(1:nm,0:nx_p+1,1:ny_p+1)=0.0_idx
+    grd%v_cori%val(1:nm,0:nx_p+1,1:ny_p+1)=0.0_idx
+    grd%v_prgf%val(1:nm,0:nx_p+1,1:ny_p+1)=0.0_idx
+    grd%v_wind%val(1:nm,0:nx_p+1,1:ny_p+1)=0.0_idx
+    grd%v_hdif%val(1:nm,0:nx_p+1,1:ny_p+1)=0.0_idx
+    grd%p_rate%val(1:nm,0:nx_p+1,0:ny_p+1)=0.0_idx
+    grd%p_drag%val(1:nm,0:nx_p+1,0:ny_p+1)=0.0_idx
+    grd%p_dudx%val(1:nm,0:nx_p+1,0:ny_p+1)=0.0_idx
+    grd%p_dvdy%val(1:nm,0:nx_p+1,0:ny_p+1)=0.0_idx
+   end subroutine clean_ocn_diag
+  subroutine initialize_ocn_diag(grd)
+    implicit none
+    type(ocn_dta),intent(inout) :: grd
+    call allocate_ocn_diag(grd)
+    call clean_ocn_diag(grd)
+   end subroutine initialize_ocn_diag
+  subroutine deallocate_ocn_diag(grd)
+    implicit none
+    type(ocn_dta),intent(inout) :: grd
+    deallocate(grd%u_rate%val)
+    deallocate(grd%u_drag%val)
+    deallocate(grd%u_cori%val)
+    deallocate(grd%u_prgf%val)
+    deallocate(grd%u_wind%val)
+    deallocate(grd%u_hdif%val)
+    deallocate(grd%v_rate%val)
+    deallocate(grd%v_drag%val)
+    deallocate(grd%v_cori%val)
+    deallocate(grd%v_prgf%val)
+    deallocate(grd%v_wind%val)
+    deallocate(grd%v_hdif%val)
+    deallocate(grd%p_rate%val)
+    deallocate(grd%p_drag%val)
+    deallocate(grd%p_dudx%val)
+    deallocate(grd%p_dvdy%val)
+   end subroutine deallocate_ocn_diag
+   subroutine oper_diag_ocn(ogrd)
+    implicit none
+    type(ocn_dta),intent(inout) :: ogrd
+    ogrd%u_rate%val=ogrd%u_rate%val+ogrd%u_rate%val
+    ogrd%u_drag%val=ogrd%u_drag%val+ogrd%u_drag%val
+    ogrd%u_cori%val=ogrd%u_cori%val+ogrd%u_cori%val
+    ogrd%u_prgf%val=ogrd%u_prgf%val+ogrd%u_prgf%val
+    ogrd%u_wind%val=ogrd%u_wind%val+ogrd%u_wind%val
+    ogrd%u_hdif%val=ogrd%u_hdif%val+ogrd%u_hdif%val
+    ogrd%v_rate%val=ogrd%v_rate%val+ogrd%v_rate%val
+    ogrd%v_drag%val=ogrd%v_drag%val+ogrd%v_drag%val
+    ogrd%v_cori%val=ogrd%v_cori%val+ogrd%v_cori%val
+    ogrd%v_prgf%val=ogrd%v_prgf%val+ogrd%v_prgf%val
+    ogrd%v_wind%val=ogrd%v_wind%val+ogrd%v_wind%val
+    ogrd%v_hdif%val=ogrd%v_hdif%val+ogrd%v_hdif%val
+    ogrd%p_rate%val=ogrd%p_rate%val+ogrd%p_rate%val
+    ogrd%p_drag%val=ogrd%p_drag%val+ogrd%p_drag%val
+    ogrd%p_dudx%val=ogrd%p_dudx%val+ogrd%p_dudx%val
+    ogrd%p_dvdy%val=ogrd%p_dvdy%val+ogrd%p_dvdy%val
+   end subroutine oper_diag_ocn
+end module mod_diag

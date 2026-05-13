@@ -7,7 +7,7 @@ FC  = gfortran
 NETCDF_INCDIR=-I/opt/homebrew/Cellar/netcdf-fortran/4.6.1/include -I/opt/homebrew/Cellar/netcdf-fortran/4.6.1/include
 NETCDF_LIBDIR=-L/opt/homebrew/Cellar/netcdf-fortran/4.6.1/lib -L/opt/homebrew/Cellar/netcdf/4.9.2_2/lib
 FFLAGS += $(NETCDF_INCDIR)
-LDFLAGS += $(NETCDF_LIBDIR) -lnetcdf -lnetcdff
+LDFLAGS += $(NETCDF_LIBDIR) -lnetcdf -lnetcdff #-fbounds-check
 LDFLAGS += -cpp -O2 -Wopenmp
 #==========================
 # You don't have to edit the following part
@@ -22,9 +22,9 @@ mod_io_master.o \
 mod_hist.o \
 mod_grid.o \
 mod_avg.o \
+mod_diag.o \
 mod_rst.o
-OBJ_ocn  = lcsm_array.o \
- ocn_dyn.o
+OBJ_ocn  = mod_lcsm_solver.o
 OBJ_main  = lcsm_main_vs.o
 
 MODS  = ncdf_read.mod \
@@ -33,11 +33,11 @@ MODS  = ncdf_read.mod \
         mod_hist.mod \
         mod_grid.mod \
         mod_avg.mod \
+        mod_diag.mod \
         mod_rst.mod \
 		mod_io_master.mod \
         run_types.mod \
-	lcsm_array.mod \
-	ocn_dyn.mod 
+	mod_lcsm_solver.mod 
 all: $(TARGET)
 
 
@@ -63,13 +63,13 @@ mod_hist.o:mod_hist.f90
 	$(FC) -c $< ${LDFLAGS} ${FFLAGS}
 mod_avg.o:mod_avg.f90
 	$(FC) -c $< ${LDFLAGS} ${FFLAGS}
+mod_diag.o:mod_diag.f90
+	$(FC) -c $< ${LDFLAGS} ${FFLAGS}
 mod_rst.o:mod_rst.f90
 	$(FC) -c $< ${LDFLAGS} ${FFLAGS}
-lcsm_array.o:lcsm_array.f90
-	$(FC) -c $< ${LDFLAGS} ${FFLAGS}
-ocn_dyn.o:ocn_dyn.f90
+mod_lcsm_solver.o:mod_lcsm_solver.f90
 	$(FC) -c $< ${LDFLAGS} ${FFLAGS}
 lcsm_main_vs.o:lcsm_main_vs.f90 run_types.f90 run_param.f90
 	$(FC) -c $< ${LDFLAGS} ${FFLAGS}
 clean:
-	rm -f $(TARGET_grid) $(TARGET) $(OBJ) $(OBJ_io) $(OBJ_grid) $(OBJ_ocn) $(OBJ_atm) $(OBJ_ncdf) $(MODS)
+	rm -f $(TARGET_grid) $(TARGET) $(OBJ) $(OBJ_main) $(OBJ_io) $(OBJ_grid) $(OBJ_ocn) $(OBJ_atm) $(OBJ_ncdf) $(MODS)
