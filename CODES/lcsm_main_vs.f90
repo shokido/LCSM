@@ -252,7 +252,7 @@ program lcsm_main_vs
      do im = 1,nm
           ogrd%obn%val(im,0:ogrd%nx_p,0:ogrd%ny_p)=ocn_obn_dta%data_now%val(0:ogrd%nx_p,0:ogrd%ny_p,im)
      end do
-     !$omp parallel private(iy,ix)
+     !$omp parallel do default(shared) private(im) schedule(static)
      !$omp do 
      do im = 1,nm
           if (out_diag_flag .ne. 0) then
