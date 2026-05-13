@@ -153,15 +153,6 @@ contains
     allocate(vw_tmp(0:nx+1,0:ny+1,1))
     do im = 1,nm
        do iy=0,ny+1
-          do ix=0,nx+1
-             if (grd%mask_p%val(ix,iy) .eq. 0.0_idx) then
-                p_tmp(ix,iy,1,1)=missing_value
-             else
-                p_tmp(ix,iy,1,1)=grd%p_avg%val(im,ix,iy)/avg_count
-             end if
-          end do
-       end do
-       do iy=0,ny+1
           do ix=1,nx+1
              if (grd%mask_u%val(ix,iy) .eq. 0.0_idx) then
                 u_tmp(ix,iy,1,1)=missing_value
@@ -170,6 +161,7 @@ contains
              end if
           end do
        end do
+       call writenet_wv(trim(fname),"u",(/1,1,im,irec/),(/nx+1,ny+2,im,irec/),u_tmp(1:nx+1,0:ny+1,1:1,1:1))
        do iy=1,ny+1
           do ix=0,nx+1
              if (grd%mask_v%val(ix,iy) .eq. 0.0_idx) then
@@ -179,10 +171,18 @@ contains
              end if
           end do
        end do
-       call writenet_wv(trim(fname),"u",(/1,1,im,irec/),(/nx+1,ny+2,im,irec/),u_tmp(1:nx+1,0:ny+1,1:1,1:1))
        call writenet_wv(trim(fname),"v",(/1,1,im,irec/),(/nx+2,ny+1,im,irec/),v_tmp(0:nx+1,1:ny+1,1:1,1:1))
+       do iy=0,ny+1
+          do ix=0,nx+1
+             if (grd%mask_p%val(ix,iy) .eq. 0.0_idx) then
+                p_tmp(ix,iy,1,1)=missing_value
+             else
+                p_tmp(ix,iy,1,1)=grd%p_avg%val(im,ix,iy)/avg_count
+             end if
+          end do
+       end do
        call writenet_wv(trim(fname),"p",(/1,1,im,irec/),(/nx+2,ny+2,im,irec/),p_tmp(0:nx+1,0:ny+1,1:1,1:1))
-    end do
+      end do
     do iy=0,ny+1
        do ix=0,nx+1
           if (grd%mask_p%val(ix,iy) .eq. 0.0_idx) then
