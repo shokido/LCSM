@@ -54,19 +54,16 @@ fnames_ocn_obn(1)="../PreProcessing/STRF/STRF_SW/SW_strf_eqpac_30.nc"
 in_rst_flag="F"
 fname_in_rst="restart_eqpac30.nc"
 /
+&output
 ! History file
-&output_hist
 out_hist_flag=1
 out_hist_int=5
 fname_out_hist="../OUTPUTS/hist_eqpac30_jra55do_sw.nc"
-/
 ! Average file
-&output_avg
 out_avg_flag=1
 out_avg_int=5
 fname_out_avg="../OUTPUTS/avg_eqpac30_jra55do_sw.nc"
-/
-&output_rst
+! Restart file
 out_rst_flag="T"
 fname_out_rst="../OUTPUTS/restart_eqpac30_jra55do_sw.nc"
 /
