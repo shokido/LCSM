@@ -4,7 +4,7 @@ module mod_diag
   use calendar_sub
   use ncdf_write
   implicit none
-  integer :: ntime_diag,idiag
+  integer :: ntime_diag,idiag,idiag_count
   real(idx),allocatable :: time_diag(:)
   integer,allocatable :: istep_diag(:)  
 contains
@@ -188,4 +188,183 @@ contains
     ogrd%p_dudx%val=ogrd%p_dudx%val+ogrd%p_dudx%val
     ogrd%p_dvdy%val=ogrd%p_dvdy%val+ogrd%p_dvdy%val
    end subroutine oper_diag_ocn
+   subroutine write_diag(fname,grd,irec,avg_count)
+    use ncdf_write
+    implicit none
+    character(len=*),intent(in) :: fname
+    type(ocn_dta),intent(inout) :: grd
+    integer,intent(inout) :: irec,avg_count
+    real(idx),allocatable :: u_tmp(:,:,:,:),v_tmp(:,:,:,:),p_tmp(:,:,:,:)
+    integer :: im,ix,iy,nx,ny,nm
+    nx=grd%nx_p;ny=grd%ny_p;nm=grd%nm
+    allocate(u_tmp(1:nx+1,0:ny+1,1,1))
+    allocate(v_tmp(0:nx+1,1:ny+1,1,1))
+    allocate(p_tmp(0:nx+1,0:ny+1,1,1))
+    do im = 1,nm
+       do iy=0,ny+1
+          do ix=1,nx+1
+             if (grd%mask_u%val(ix,iy) .eq. 0.0_idx) then
+                u_tmp(ix,iy,1,1)=missing_value
+             else
+                u_tmp(ix,iy,1,1)=grd%u_rate%val(im,ix,iy)/avg_count
+             end if
+          end do
+       end do
+       call writenet_wv(trim(fname),"u_rate",(/1,1,im,irec/),(/nx+1,ny+2,im,irec/),u_tmp(1:nx+1,0:ny+1,1:1,1:1))
+       do iy=0,ny+1
+          do ix=1,nx+1
+             if (grd%mask_u%val(ix,iy) .eq. 0.0_idx) then
+                u_tmp(ix,iy,1,1)=missing_value
+             else
+                u_tmp(ix,iy,1,1)=grd%u_drag%val(im,ix,iy)/avg_count
+             end if
+          end do
+       end do
+       call writenet_wv(trim(fname),"u_drag",(/1,1,im,irec/),(/nx+1,ny+2,im,irec/),u_tmp(1:nx+1,0:ny+1,1:1,1:1))
+       do iy=0,ny+1
+          do ix=1,nx+1
+             if (grd%mask_u%val(ix,iy) .eq. 0.0_idx) then
+                u_tmp(ix,iy,1,1)=missing_value
+             else
+                u_tmp(ix,iy,1,1)=grd%u_cori%val(im,ix,iy)/avg_count
+             end if
+          end do
+       end do
+       call writenet_wv(trim(fname),"u_cori",(/1,1,im,irec/),(/nx+1,ny+2,im,irec/),u_tmp(1:nx+1,0:ny+1,1:1,1:1))
+       do iy=0,ny+1
+          do ix=1,nx+1
+             if (grd%mask_u%val(ix,iy) .eq. 0.0_idx) then
+                u_tmp(ix,iy,1,1)=missing_value
+             else
+                u_tmp(ix,iy,1,1)=grd%u_prgf%val(im,ix,iy)/avg_count
+             end if
+          end do
+       end do
+       call writenet_wv(trim(fname),"u_prgf",(/1,1,im,irec/),(/nx+1,ny+2,im,irec/),u_tmp(1:nx+1,0:ny+1,1:1,1:1))
+       do iy=0,ny+1
+          do ix=1,nx+1
+             if (grd%mask_u%val(ix,iy) .eq. 0.0_idx) then
+                u_tmp(ix,iy,1,1)=missing_value
+             else
+                u_tmp(ix,iy,1,1)=grd%u_wind%val(im,ix,iy)/avg_count
+             end if
+          end do
+       end do
+       call writenet_wv(trim(fname),"u_wind",(/1,1,im,irec/),(/nx+1,ny+2,im,irec/),u_tmp(1:nx+1,0:ny+1,1:1,1:1))
+       do iy=0,ny+1
+          do ix=1,nx+1
+             if (grd%mask_u%val(ix,iy) .eq. 0.0_idx) then
+                u_tmp(ix,iy,1,1)=missing_value
+             else
+                u_tmp(ix,iy,1,1)=grd%u_hdif%val(im,ix,iy)/avg_count
+             end if
+          end do
+       end do
+       call writenet_wv(trim(fname),"u_hdif",(/1,1,im,irec/),(/nx+1,ny+2,im,irec/),u_tmp(1:nx+1,0:ny+1,1:1,1:1))
+      ! V
+       do iy=1,ny+1
+          do ix=0,nx+1
+             if (grd%mask_v%val(ix,iy) .eq. 0.0_idx) then
+                v_tmp(ix,iy,1,1)=missing_value
+             else
+                v_tmp(ix,iy,1,1)=grd%v_rate%val(im,ix,iy)/avg_count
+             end if
+          end do
+       end do
+       call writenet_wv(trim(fname),"v_rate",(/1,1,im,irec/),(/nx+2,ny+1,im,irec/),v_tmp(0:nx+1,1:ny+1,1:1,1:1))
+       do iy=1,ny+1
+          do ix=0,nx+1
+             if (grd%mask_v%val(ix,iy) .eq. 0.0_idx) then
+                v_tmp(ix,iy,1,1)=missing_value
+             else
+                v_tmp(ix,iy,1,1)=grd%v_drag%val(im,ix,iy)/avg_count
+             end if
+          end do
+       end do
+       call writenet_wv(trim(fname),"v_drag",(/1,1,im,irec/),(/nx+2,ny+1,im,irec/),v_tmp(0:nx+1,1:ny+1,1:1,1:1))
+       do iy=1,ny+1
+          do ix=0,nx+1
+             if (grd%mask_v%val(ix,iy) .eq. 0.0_idx) then
+                v_tmp(ix,iy,1,1)=missing_value
+             else
+                v_tmp(ix,iy,1,1)=grd%v_cori%val(im,ix,iy)/avg_count
+             end if
+          end do
+       end do
+       call writenet_wv(trim(fname),"v_cori",(/1,1,im,irec/),(/nx+2,ny+1,im,irec/),v_tmp(0:nx+1,1:ny+1,1:1,1:1))
+       do iy=1,ny+1
+          do ix=0,nx+1
+             if (grd%mask_v%val(ix,iy) .eq. 0.0_idx) then
+                v_tmp(ix,iy,1,1)=missing_value
+             else
+                v_tmp(ix,iy,1,1)=grd%v_prgf%val(im,ix,iy)/avg_count
+             end if
+          end do
+       end do
+       call writenet_wv(trim(fname),"v_prgf",(/1,1,im,irec/),(/nx+2,ny+1,im,irec/),v_tmp(0:nx+1,1:ny+1,1:1,1:1))
+       do iy=1,ny+1
+          do ix=0,nx+1
+             if (grd%mask_v%val(ix,iy) .eq. 0.0_idx) then
+                v_tmp(ix,iy,1,1)=missing_value
+             else
+                v_tmp(ix,iy,1,1)=grd%v_wind%val(im,ix,iy)/avg_count
+             end if
+          end do
+       end do
+       call writenet_wv(trim(fname),"v_wind",(/1,1,im,irec/),(/nx+2,ny+1,im,irec/),v_tmp(0:nx+1,1:ny+1,1:1,1:1))
+       do iy=1,ny+1
+          do ix=0,nx+1
+             if (grd%mask_v%val(ix,iy) .eq. 0.0_idx) then
+                v_tmp(ix,iy,1,1)=missing_value
+             else
+                v_tmp(ix,iy,1,1)=grd%v_hdif%val(im,ix,iy)/avg_count
+             end if
+          end do
+       end do
+       call writenet_wv(trim(fname),"v_hdif",(/1,1,im,irec/),(/nx+2,ny+1,im,irec/),v_tmp(0:nx+1,1:ny+1,1:1,1:1))
+       ! P
+       do iy=0,ny+1
+          do ix=0,nx+1
+             if (grd%mask_p%val(ix,iy) .eq. 0.0_idx) then
+                p_tmp(ix,iy,1,1)=missing_value
+             else
+                p_tmp(ix,iy,1,1)=grd%p_rate%val(im,ix,iy)/avg_count
+             end if
+          end do
+       end do
+       call writenet_wv(trim(fname),"p_rate",(/1,1,im,irec/),(/nx+2,ny+2,im,irec/),p_tmp(0:nx+1,0:ny+1,1:1,1:1))
+       do iy=0,ny+1
+          do ix=0,nx+1
+             if (grd%mask_p%val(ix,iy) .eq. 0.0_idx) then
+                p_tmp(ix,iy,1,1)=missing_value
+             else
+                p_tmp(ix,iy,1,1)=grd%p_drag%val(im,ix,iy)/avg_count
+             end if
+          end do
+       end do
+       call writenet_wv(trim(fname),"p_drag",(/1,1,im,irec/),(/nx+2,ny+2,im,irec/),p_tmp(0:nx+1,0:ny+1,1:1,1:1))
+       do iy=0,ny+1
+          do ix=0,nx+1
+             if (grd%mask_p%val(ix,iy) .eq. 0.0_idx) then
+                p_tmp(ix,iy,1,1)=missing_value
+             else
+                p_tmp(ix,iy,1,1)=grd%p_dudx%val(im,ix,iy)/avg_count
+             end if
+          end do
+       end do
+       call writenet_wv(trim(fname),"p_dudx",(/1,1,im,irec/),(/nx+2,ny+2,im,irec/),p_tmp(0:nx+1,0:ny+1,1:1,1:1))
+       do iy=0,ny+1
+          do ix=0,nx+1
+             if (grd%mask_p%val(ix,iy) .eq. 0.0_idx) then
+                p_tmp(ix,iy,1,1)=missing_value
+             else
+                p_tmp(ix,iy,1,1)=grd%p_dvdy%val(im,ix,iy)/avg_count
+             end if
+          end do
+       end do
+       call writenet_wv(trim(fname),"p_dvdy",(/1,1,im,irec/),(/nx+2,ny+2,im,irec/),p_tmp(0:nx+1,0:ny+1,1:1,1:1))
+    end do
+    deallocate(p_tmp);deallocate(u_tmp);deallocate(v_tmp)
+   end subroutine write_diag
+
 end module mod_diag

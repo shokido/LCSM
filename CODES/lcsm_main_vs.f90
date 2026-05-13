@@ -27,7 +27,6 @@ program lcsm_main_vs
   real(idx) :: total_time
   integer :: ntime
   real(idx) :: time_int
-  integer :: iavg_count
   real(idx) :: tmp
   character(maxlen) :: fname_in_grid
   ! History file
@@ -219,22 +218,23 @@ program lcsm_main_vs
   if (out_diag_flag .ne. 0) then
        write(*,*) "File name= "//trim(fname_out_diag)
        call initialize_ocn_diag(ogrd)  
-       call create_diag(trim(fname_out_avg),ogrd,oset,&
+       call create_diag(trim(fname_out_diag),ogrd,oset,&
             & start_yymmdd,start_hhmmss,end_yymmdd,end_hhmmss,&
-            & out_avg_flag,out_avg_int,missing_value,istep_avg,ntime_avg)
+            & out_diag_flag,out_diag_int,missing_value,istep_diag,ntime_diag)
   endif   
   read(5,nml=param_ocn)
   ! ======================!
   !  Start point of loop  !
   ! ======================!
-  ihist = 1 ; iavg = 1
-  iavg_count=0
+  ihist = 1 ; iavg = 1;idiag=1
+  iavg_count=0;idiag_count=0
   ! Starting point of loop
   write(*,*) "Number of points= ",ogrd%nx_p,"(x),",ogrd%ny_p,"(y)"
   write(*,*) "Total vertical modes=",nm
   write(*,*) "Number of timestep=",ntime
   do itime = 1,ntime
      iavg_count = iavg_count + 1
+     idiag_count = idiag_count + 1
      time_int=dt*itime*sec_to_day
      ! Zonal wind stress
      call get_data_TLL_p(time_int,start_yymmdd,start_hhmmss,ogrd%nx_p,ogrd%ny_p,ocn_taux_dta)
@@ -255,18 +255,50 @@ program lcsm_main_vs
      !$omp parallel private(iy,ix)
      !$omp do 
      do im = 1,nm
-          call solve_sw_mode_asselin(ogrd,oset,&
-          & ogrd%u%val(im,1:ogrd%nx_p+1,0:ogrd%ny_p+1),&
-          & ogrd%v%val(im,0:ogrd%nx_p+1,1:ogrd%ny_p+1),&
-          & ogrd%p%val(im,0:ogrd%nx_p+1,0:ogrd%ny_p+1),&
-          & ogrd%u_past%val(im,1:ogrd%nx_p+1,0:ogrd%ny_p+1),&
-          & ogrd%v_past%val(im,0:ogrd%nx_p+1,1:ogrd%ny_p+1),&
-          & ogrd%p_past%val(im,0:ogrd%nx_p+1,0:ogrd%ny_p+1),&
-          & ogrd%u_next%val(im,1:ogrd%nx_p+1,0:ogrd%ny_p+1),&
-          & ogrd%v_next%val(im,0:ogrd%nx_p+1,1:ogrd%ny_p+1),&
-          & ogrd%p_next%val(im,0:ogrd%nx_p+1,0:ogrd%ny_p+1),&
-          & ogrd%cn%val(im,0:ogrd%nx_p+1,0:ogrd%ny_p+1),ogrd%obn%val(im,0:ogrd%nx_p+1,0:ogrd%ny_p+1),&
-          & ogrd%tau_x%val(0:ogrd%nx_p+1,0:ogrd%ny_p+1),ogrd%tau_y%val(0:ogrd%nx_p+1,0:ogrd%ny_p+1),dt)
+          if (out_diag_flag .ne. 0) then
+               call solve_sw_mode_asselin_diag(ogrd,oset,&
+               & ogrd%u%val(im,1:ogrd%nx_p+1,0:ogrd%ny_p+1),&
+               & ogrd%v%val(im,0:ogrd%nx_p+1,1:ogrd%ny_p+1),&
+               & ogrd%p%val(im,0:ogrd%nx_p+1,0:ogrd%ny_p+1),&
+               & ogrd%u_past%val(im,1:ogrd%nx_p+1,0:ogrd%ny_p+1),&
+               & ogrd%v_past%val(im,0:ogrd%nx_p+1,1:ogrd%ny_p+1),&
+               & ogrd%p_past%val(im,0:ogrd%nx_p+1,0:ogrd%ny_p+1),&
+               & ogrd%u_next%val(im,1:ogrd%nx_p+1,0:ogrd%ny_p+1),&
+               & ogrd%v_next%val(im,0:ogrd%nx_p+1,1:ogrd%ny_p+1),&
+               & ogrd%p_next%val(im,0:ogrd%nx_p+1,0:ogrd%ny_p+1),&
+               & ogrd%cn%val(im,0:ogrd%nx_p+1,0:ogrd%ny_p+1),ogrd%obn%val(im,0:ogrd%nx_p+1,0:ogrd%ny_p+1),&
+               & ogrd%tau_x%val(0:ogrd%nx_p+1,0:ogrd%ny_p+1),ogrd%tau_y%val(0:ogrd%nx_p+1,0:ogrd%ny_p+1),&
+               & ogrd%u_rate%val(im,1:ogrd%nx_p+1,0:ogrd%ny_p+1),&
+               & ogrd%u_drag%val(im,1:ogrd%nx_p+1,0:ogrd%ny_p+1),&
+               & ogrd%u_cori%val(im,1:ogrd%nx_p+1,0:ogrd%ny_p+1),&
+               & ogrd%u_prgf%val(im,1:ogrd%nx_p+1,0:ogrd%ny_p+1),&
+               & ogrd%u_wind%val(im,1:ogrd%nx_p+1,0:ogrd%ny_p+1),&
+               & ogrd%u_hdif%val(im,1:ogrd%nx_p+1,0:ogrd%ny_p+1),&
+               & ogrd%v_rate%val(im,0:ogrd%nx_p+1,1:ogrd%ny_p+1),&
+               & ogrd%v_drag%val(im,0:ogrd%nx_p+1,1:ogrd%ny_p+1),&
+               & ogrd%v_cori%val(im,0:ogrd%nx_p+1,1:ogrd%ny_p+1),&
+               & ogrd%v_prgf%val(im,0:ogrd%nx_p+1,1:ogrd%ny_p+1),&
+               & ogrd%v_wind%val(im,0:ogrd%nx_p+1,1:ogrd%ny_p+1),&
+               & ogrd%v_hdif%val(im,0:ogrd%nx_p+1,1:ogrd%ny_p+1),&
+               & ogrd%p_rate%val(im,0:ogrd%nx_p+1,0:ogrd%ny_p+1),&
+               & ogrd%p_drag%val(im,0:ogrd%nx_p+1,0:ogrd%ny_p+1),&
+               & ogrd%p_dudx%val(im,0:ogrd%nx_p+1,0:ogrd%ny_p+1),&
+               & ogrd%p_dvdy%val(im,0:ogrd%nx_p+1,0:ogrd%ny_p+1),&
+               & dt)
+          else
+               call solve_sw_mode_asselin(ogrd,oset,&
+               & ogrd%u%val(im,1:ogrd%nx_p+1,0:ogrd%ny_p+1),&
+               & ogrd%v%val(im,0:ogrd%nx_p+1,1:ogrd%ny_p+1),&
+               & ogrd%p%val(im,0:ogrd%nx_p+1,0:ogrd%ny_p+1),&
+               & ogrd%u_past%val(im,1:ogrd%nx_p+1,0:ogrd%ny_p+1),&
+               & ogrd%v_past%val(im,0:ogrd%nx_p+1,1:ogrd%ny_p+1),&
+               & ogrd%p_past%val(im,0:ogrd%nx_p+1,0:ogrd%ny_p+1),&
+               & ogrd%u_next%val(im,1:ogrd%nx_p+1,0:ogrd%ny_p+1),&
+               & ogrd%v_next%val(im,0:ogrd%nx_p+1,1:ogrd%ny_p+1),&
+               & ogrd%p_next%val(im,0:ogrd%nx_p+1,0:ogrd%ny_p+1),&
+               & ogrd%cn%val(im,0:ogrd%nx_p+1,0:ogrd%ny_p+1),ogrd%obn%val(im,0:ogrd%nx_p+1,0:ogrd%ny_p+1),&
+               & ogrd%tau_x%val(0:ogrd%nx_p+1,0:ogrd%ny_p+1),ogrd%tau_y%val(0:ogrd%nx_p+1,0:ogrd%ny_p+1),dt)
+          end if
         ! Update
           ogrd%u_past%val(im,1:ogrd%nx_p+1,0:ogrd%ny_p+1) =ogrd%u%val(im,1:ogrd%nx_p+1,0:ogrd%ny_p+1)
           ogrd%u%val(im,1:ogrd%nx_p+1,0:ogrd%ny_p+1) = ogrd%u_next%val(im,1:ogrd%nx_p+1,0:ogrd%ny_p+1)
@@ -292,12 +324,22 @@ program lcsm_main_vs
      end if
      if (out_avg_flag .ne. 0) then
           if (itime .eq. istep_avg(iavg)) then
-          write(*,*) "Step (average) =",iavg," ",itime
-          call write_avg(trim(fname_out_avg),ogrd,iavg,iavg_count)
-          call clean_ocn_avg(ogrd)  
-          iavg=iavg+1
-          iavg=min(iavg,ntime_avg)
-          iavg_count=0
+               write(*,*) "Step (average) =",iavg," ",itime
+               call write_avg(trim(fname_out_avg),ogrd,iavg,iavg_count)
+               call clean_ocn_avg(ogrd)  
+               iavg=iavg+1
+               iavg=min(iavg,ntime_avg)
+               iavg_count=0
+          end if
+     end if
+     if (out_diag_flag .ne. 0) then
+          if (itime .eq. istep_diag(idiag)) then
+               write(*,*) "Step (diagnosis) =",idiag," ",itime
+               call write_diag(trim(fname_out_diag),ogrd,idiag,idiag_count)
+               call clean_ocn_diag(ogrd)  
+               idiag=idiag+1
+               idiag=min(idiag,ntime_diag)
+               idiag_count=0
           end if
      end if
   end do
