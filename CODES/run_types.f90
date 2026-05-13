@@ -19,6 +19,29 @@ module run_types
   type :: vector_4d
      real(idx),allocatable :: val(:,:,:,:)
   end type vector_4d
+   type :: ocn_dta
+      integer :: nx_p,ny_p,nm
+      type(vector_1d) :: modes
+      type(vector_1d) :: lon_p, lat_p
+      type(vector_1d) :: lon_u, lat_u
+      type(vector_1d) :: lon_v, lat_v
+      type(vector_2d) :: x_p, y_p
+      type(vector_2d) :: x_u, y_u
+      type(vector_2d) :: x_v, y_v
+      type(vector_2d) :: f,mask_p,mask_u,mask_v
+      type(vector_2d) :: mask_phi_u,mask_phi_v
+      type(vector_2d) :: damp_u,damp_v,damp_p      
+      type(vector_2d) :: tau_x,tau_y,nu
+      type(vector_3d) :: cn,obn
+      type(vector_3d) :: u,v,p
+      type(vector_3d) :: u_past,v_past,p_past
+      type(vector_3d) :: u_next,v_next,p_next
+      type(vector_2d) :: tau_x_avg,tau_y_avg
+      type(vector_3d) :: u_avg,v_avg,p_avg
+      type(vector_3d) :: u_rate,u_drag,u_cori,u_prgf,u_wind,u_hdif
+      type(vector_3d) :: v_rate,v_drag,v_cori,v_prgf,v_wind,v_hdif
+      type(vector_3d) :: p_rate,p_drag,p_dudx,p_dvdy
+     end type ocn_dta
   type :: ocn_set
   real(idx) :: A ! in  [m^2/s^3]
   real(idx) :: rho0=1024.0 ! in  [kg/m^3]
