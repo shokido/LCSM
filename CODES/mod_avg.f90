@@ -5,7 +5,7 @@ module mod_avg
   use ncdf_write
   implicit none
   ! Time array
-  integer :: ntime_avg,iavg
+  integer :: ntime_avg,iavg,iavg_count
   real(idx),allocatable :: time_avg(:)
   integer,allocatable :: istep_avg(:)  
 contains
