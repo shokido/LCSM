@@ -41,6 +41,8 @@ GALLERY/
 Confirmed from the repository:
 
 - A Fortran compiler. The provided `CODES/Makefile` uses `gfortran`.
+  - Standard build: `CODES/Makefile` uses `gfortran`.
+  - **OpenMP parallel build:** `CODES/Makefile.gfortran_OMP` is provided for multi-core acceleration.
 - NetCDF C and NetCDF Fortran libraries. The Makefile links with
   `-lnetcdf -lnetcdff`.
 - Lapack Fortran libraries. This is necesarry for executing eigenmode analysis codes in STRF/
@@ -67,9 +69,15 @@ git clone https://github.com/shokido/LCSM
 cd LCSM
 ```
 ### 2. Edit CODES/Makefile if NetCDF include/library paths differ.
+Standard build:
 ```bash
 cd CODES
 make -f Makefile
+```
+OpenMP parallel build (Recommended for faster execution):
+```bash
+cd CODES
+make -f Makefile.gfortran_OMP
 ```
 ### 3. Run the shallow-water single mode example.
 ```bash
@@ -78,7 +86,11 @@ mkdir -p OUTPUTS/
 cd RUN/
 ../CODES/exec_solver_lcsm_dyn.out < test_eqpac30_eqpatch_sw.nml
 ```
-
+For OpenMP execution
+```bash
+export OMP_NUM_THREADS=5     # Set to the number of CPU cores you want to use
+../CODES/exec_solver_lcsm_dyn.out < test_eqpac30_jra55do_mode5_unicp.nml
+```
 ## Governing equations
 ### Original equation
 ```math
