@@ -253,7 +253,6 @@ program lcsm_main_vs
           ogrd%obn%val(im,0:ogrd%nx_p,0:ogrd%ny_p)=ocn_obn_dta%data_now%val(0:ogrd%nx_p,0:ogrd%ny_p,im)
      end do
      !$omp parallel do default(shared) private(im) schedule(static)
-     !$omp do 
      do im = 1,nm
           if (out_diag_flag .ne. 0) then
                call solve_sw_mode_asselin_diag(ogrd,oset,&
@@ -307,8 +306,7 @@ program lcsm_main_vs
           ogrd%p_past%val(im,0:ogrd%nx_p+1,0:ogrd%ny_p+1) = ogrd%p%val(im,0:ogrd%nx_p+1,0:ogrd%ny_p+1)
           ogrd%p%val(im,0:ogrd%nx_p+1,0:ogrd%ny_p+1) =ogrd%p_next%val(im,0:ogrd%nx_p+1,0:ogrd%ny_p+1)
      end do
-     !$omp end do
-     !$omp end parallel
+     !$omp end parallel do
      if (out_avg_flag .ne. 0) then
           call oper_avg_ocn(ogrd)
      end if

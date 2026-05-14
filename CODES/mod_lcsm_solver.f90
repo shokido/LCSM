@@ -424,7 +424,7 @@ contains
   subroutine solve_sw_mode_asselin(ogrd,oset,u,v,p,u_past,v_past,p_past,u_next,v_next,p_next,&
    & cn,obn,tau_x,tau_y,dt)
     implicit none
-    type(ocn_dta),intent(inout) :: ogrd
+    type(ocn_dta),intent(in) :: ogrd
     type(ocn_set),intent(in) :: oset
     real(idx),intent(in) :: dt
     integer :: ix,iy
@@ -519,7 +519,7 @@ contains
    & p_rate,p_drag,p_dudx,p_dvdy,&
    & dt)
     implicit none
-    type(ocn_dta),intent(inout) :: ogrd
+    type(ocn_dta),intent(in) :: ogrd
     type(ocn_set),intent(in) :: oset
     real(idx),intent(in) :: dt
     integer :: ix,iy

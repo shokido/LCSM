@@ -6,9 +6,9 @@ FC  = gfortran
 #Set compile option
 NETCDF_INCDIR=-I/opt/homebrew/Cellar/netcdf-fortran/4.6.1/include -I/opt/homebrew/Cellar/netcdf-fortran/4.6.1/include
 NETCDF_LIBDIR=-L/opt/homebrew/Cellar/netcdf-fortran/4.6.1/lib -L/opt/homebrew/Cellar/netcdf/4.9.2_2/lib
-FFLAGS += $(NETCDF_INCDIR)
-LDFLAGS += $(NETCDF_LIBDIR) -lnetcdf -lnetcdff
-LDFLAGS += -cpp -O2
+FFLAGS += $(NETCDF_INCDIR) -fopenmp
+LDFLAGS += $(NETCDF_LIBDIR) -lnetcdf -lnetcdff #-fbounds-check
+LDFLAGS += -cpp -O2 -fopenmp
 #==========================
 # You don't have to edit the following part
 #==========================
